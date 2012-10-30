@@ -3,9 +3,14 @@
 cimport cython
 cimport numpy as np
 import numpy as np
+from time import time
 
-from libc.math cimport exp, floor
+from libc.math cimport exp, fmod
 from libc.stdio cimport printf
+from libc.stdlib cimport rand, RAND_MAX, srand
+
+
+cdef float fRAND_MAX = <float> RAND_MAX
 
 DTYPE = np.int
 ctypedef np.int_t DTYPE_t
@@ -28,12 +33,12 @@ cdef float mean_magnetization = 0
 #Spins are 1 or -1
 cdef np.ndarray spins = np.ones((N,N), dtype=DTYPE)
 
-cdef np.ndarray random_indices
-cdef np.ndarray rejection_numbers
+cdef inline unsigned int randint(int n):
+    return rand() % n
 
-cdef long [:] r_ix
-cdef double [:] r_rnd
-cdef int rnd_i, rnd_j
+cdef inline float randfloat():
+    return <float>rand()/fRAND_MAX
+
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -46,9 +51,7 @@ cdef inline int delta_E(DTYPE_t [:,::1] s, unsigned int i, unsigned int j):
 cdef inline bint accepted(int dE, float beta):
     global rnd_j
     cdef float P = exp(-beta*dE)
-    cdef float rnd = r_rnd[rnd_j]
-    rnd_j +=1
-    return rnd < P
+    return randfloat() < P
 
 @cython.boundscheck(False)
 cdef metropolis_step(DTYPE_t [:,::1] s, float beta):
@@ -56,12 +59,9 @@ cdef metropolis_step(DTYPE_t [:,::1] s, float beta):
     cdef DTYPE_t spin
     global magnetization
     global energy
-    global rnd_i
 
-    i = r_ix[rnd_i]
-    rnd_i += 1
-    j = r_ix[rnd_i]
-    rnd_i += 1
+    i = randint(N)
+    j = randint(N)
 
     cdef int dE = delta_E(s,i,j)
     if dE < 0 or accepted(dE, beta):
@@ -81,7 +81,7 @@ cdef evolve(DTYPE_t [:, ::1] s, int n, float beta):
 @cython.cdivision(True)
 cdef time_average(DTYPE_t [:,::1] s, int n, float beta):
     cdef float mag = 0
-    cdef float en
+    cdef float en = 0
     cdef int i
     for i in range(n):
         metropolis_step(s, beta)
@@ -105,10 +105,9 @@ cdef int evaluate_energy(DTYPE_t [:, ::1] s):
 
 def _ensemble_av(float beta, int n_evolve=1000, int n_average=100):
     cdef float T = 1/beta
-    if T - floor(T) < 0.01:
+    if fmod(T, 0.5) < 0.01:
         printf("%f\n", T)
 
-    init_rands(n_evolve+n_average)
     evolve(spins, n_evolve, beta)
     return time_average(spins, n_average, beta)
 
@@ -118,23 +117,13 @@ def initialize(int n):
     global energy
     global N
     N = n
+    srand(<unsigned int>time())
 
     spins = np.ones((N,N), dtype=DTYPE)
     populate_nn()
 
     magnetization = np.sum(spins)
     energy = evaluate_energy(spins)
-
-cdef init_rands(int n):
-    global random_indices, rejection_numbers
-    global r_ix, r_rnd
-    global rnd_i, rnd_j
-    random_indices = np.random.randint(0, N, 2*n)
-    rejection_numbers = np.random.rand(n)
-    r_ix = random_indices
-    r_rnd = rejection_numbers
-    rnd_i = 0
-    rnd_j = 0
 
 cdef populate_nn():
     global nn1, nn2, nn1t, nn2t
