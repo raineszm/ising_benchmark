@@ -27,9 +27,6 @@ cdef np.ndarray nn1, nn2
 cdef UTYPE_t [::1] nn1t
 cdef UTYPE_t [::1] nn2t
 
-cdef float mean_energy = 0
-cdef float mean_magnetization = 0
-
 #Spins are 1 or -1
 cdef np.ndarray spins = np.ones((N,N), dtype=DTYPE)
 
@@ -42,18 +39,17 @@ cdef inline float randfloat():
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef inline int delta_E(DTYPE_t [:,::1] s, unsigned int i, unsigned int j):    
+cdef inline DTYPE_t delta_E(DTYPE_t [:,::1] s, unsigned int i, unsigned int j):    
     return 2*s[i,j]*(s[<unsigned int>nn1t[i],j] 
                        + s[i,<unsigned int>nn1t[j]]
                        + s[<unsigned int>nn2t[i],j]
                        + s[i, <unsigned int>nn2t[j]])
     
-cdef inline bint accepted(int dE, float beta):
-    global rnd_j
-    cdef float P = exp(-beta*dE)
-    return randfloat() < P
+cdef inline bint accepted(DTYPE_t dE, float beta):
+    return randfloat() < exp(-beta*dE) 
 
 @cython.boundscheck(False)
+@cython.wraparound(False)
 cdef metropolis_step(DTYPE_t [:,::1] s, float beta):
     cdef unsigned int i, j
     cdef DTYPE_t spin
@@ -63,7 +59,7 @@ cdef metropolis_step(DTYPE_t [:,::1] s, float beta):
     i = randint(N)
     j = randint(N)
 
-    cdef int dE = delta_E(s,i,j)
+    cdef DTYPE_t dE = delta_E(s,i,j)
     if dE < 0 or accepted(dE, beta):
         spin = s[i,j]
         s[i,j] = - spin
@@ -79,16 +75,17 @@ cdef evolve(DTYPE_t [:, ::1] s, int n, float beta):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-cdef time_average(DTYPE_t [:,::1] s, int n, float beta):
-    cdef float mag = 0
-    cdef float en = 0
+cdef time_average(DTYPE_t [:,::1] s, int n, beta):
+    cdef double mag = 0
+    cdef double en = 0
+    cdef double fn = <double> n
     cdef int i
     for i in range(n):
         metropolis_step(s, beta)
         mag += magnetization
         en += energy
 
-    return mag/n, en/n
+    return mag/fn, en/fn
 
 
 cdef int evaluate_energy(DTYPE_t [:, ::1] s):
@@ -105,7 +102,7 @@ cdef int evaluate_energy(DTYPE_t [:, ::1] s):
 
 def _ensemble_av(float beta, int n_evolve=1000, int n_average=100):
     cdef float T = 1/beta
-    if fmod(T, 0.5) < 0.01:
+    if fmod(T, 0.1) < 0.01:
         printf("%f\n", T)
 
     evolve(spins, n_evolve, beta)
