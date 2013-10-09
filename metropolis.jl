@@ -10,15 +10,17 @@ global nn2
 
 #Calculate the energy change due to a spin flip
 function delta_E(s :: Array{Int8, 2}, i, j)
-    2*s[i,j]*(s[nn1[i],j]+s[nn2[i],j]
-        +s[i,nn1[j]]+s[i,nn2[j]])
+    2*s[i,j]*(s[nn1[i],j]
+        +s[nn2[i],j]
+        +s[i,nn1[j]]
+        +s[i,nn2[j]])
 end
 
 #Determine whether to accept a proposed new configuration
-accepted(dE :: Real, beta :: Real) = rand() < exp(-beta*dE)
+accepted(dE, beta) = rand() < exp(-beta*dE)
 
 function metropolis_step!(s :: Array{Int8, 2}, beta :: Real)
-    (i, j) = rand(1:N, 2)
+    (i, j) = rand(1:(N::Int), 2)
 
     dE = delta_E(s, i, j)
 
@@ -56,8 +58,8 @@ end
 function evaluate_energy(s :: Array{Int8, 2})
     total = 0
 
-    for i=1:N
-        for j=1:N
+    for i=1:(N::Int)
+        for j=1:(N::Int)
             total -= s[i,j]*(s[nn1[i],j]+ s[i,nn2[j]])
         end
     end
