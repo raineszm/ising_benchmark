@@ -6,18 +6,6 @@ N = 64 # Lattice Size
 #Holds the nearest neighbor indices for each index
 global nn1 
 global nn2
-global magnetization = 0
-global energy = 0
-
-#The lattices
-#Spins are 1 or -1
-spins = ones(Int8, N, N)
-
-
-#---------------- RANDOM NUMBER GENERATION ----------------------------
-#Generate a random integer less than n
-rand_int(n :: Int) = rand(Uint) % n + 1
-#------------------------------- END ----------------------------------
 
 
 #Calculate the energy change due to a spin flip
@@ -29,36 +17,37 @@ end
 #Determine whether to accept a proposed new configuration
 accepted(dE :: Real, beta :: Real) = rand() < exp(-beta*dE)
 
-function metropolis_step(s :: Array{Int8, 2}, beta :: Real)
-    global energy, magnetization
-    i = rand_int(N)
-    j = rand_int(N)
+function metropolis_step!(s :: Array{Int8, 2}, beta :: Real)
+    (i, j) = rand(1:N, 2)
 
     dE = delta_E(s, i, j)
 
     if dE < 0 || accepted(dE, beta)
         spin = s[i,j]
         s[i,j] = - s[i,j]
-        energy += dE
-        magnetization -= 2spin
+        return dE, -2spin
     end
-    s
+    0,0
 end
 
 function evolve(s :: Array{Int8,2}, n, beta :: Real)
     for i=1:n
-        s=metropolis_step(s, beta)
+        metropolis_step!(s, beta)
     end
 end
 
 function time_average(s :: Array{Int8, 2}, n, beta :: Real)
+    U = evaluate_energy(s)
+    M = sum(s)
     mag = 0
     en = 0
 
-    for i=1:N
-        metropolis_step(s, beta)
-        mag += magnetization
-        en += energy
+    for i=1:n
+        (dE, dM) = metropolis_step!(s, beta)
+        U += dE
+        M += dM
+        mag += M
+        en += U
     end
 
     return mag/n, en/n
@@ -75,10 +64,13 @@ function evaluate_energy(s :: Array{Int8, 2})
     total
 end
 
-function ensemble_av(beta, n_evolve :: Integer, n_average :: Integer)
+function ensemble_av(beta, n_evolve, n_average)
+    srand(ifloor(time()))
+    spins = ones(Int8, N, N)
+
     T = 1/beta
     #Update us on the simulation progress
-    if mod(T, 0.1) < 0.02
+    if mod(T, 0.1) < 0.01
         println(T)
     end
 
@@ -86,32 +78,17 @@ function ensemble_av(beta, n_evolve :: Integer, n_average :: Integer)
     time_average(spins, n_average, beta)
 end
 
-function initialize(n :: Integer)
+function set_lattice_size(n :: Integer)
     global N
-    global spins
-    global magnetization
-    global energy
-
+    global nn1, nn2
+    
     N = n
 
-    srand(ifloor(time()))
-
-    spins = ones(Int8, N, N)
-
-    populate_nn()
-
-    magnetization = sum(spins)
-    energy = evaluate_energy(spins)
-    true
-end
-
-
-
-function populate_nn()
     r = 1:N
-    global nn1, nn2
     nn1 = [r[end], r[1:(end-1)]]
     nn2 = [r[2:end], r[1]]
-    true
+
+    N
 end
+
 end
