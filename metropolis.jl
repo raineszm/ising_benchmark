@@ -7,6 +7,10 @@ N = 64 # Lattice Size
 global nn1 
 global nn2
 
+function crand(n :: Int)
+	ccall(:rand, Cint, ()) % n + one(n)
+end
+
 
 #Calculate the energy change due to a spin flip
 function delta_E(s :: Array{Int, 2}, i, j)
@@ -20,8 +24,8 @@ end
 accepted(dE, beta) = rand() < exp(-beta*dE)
 
 function metropolis_step!(s :: Array{Int, 2}, beta)
-    i = rand(1:(N::Int))
-    j = rand(1:(N::Int))
+    i = crand(N::Int)
+    j = crand(N::Int)
 
     dE = delta_E(s, i, j)
 
@@ -61,7 +65,7 @@ function evaluate_energy(s :: Array{Int, 2})
 
     for i=1:(N::Int)
         for j=1:(N::Int)
-            total -= s[i,j]*(s[nn1[i],j]+ s[i,nn2[j]])
+            total -= s[i,j]*(s[nn1[i]::Int,j]+ s[i,nn2[j]::Int])
         end
     end
     total
