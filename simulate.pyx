@@ -131,7 +131,7 @@ def _ensemble_av(float beta, int n_evolve=1000, int n_average=100):
     #Now take thermal averages
     return time_average(spins, n_average, beta)
 
-def initialize(int n, double var=VAR):
+def initialize(int n):
     global spins
     global magnetization
     global energy
@@ -150,7 +150,7 @@ def initialize(int n, double var=VAR):
     energy = evaluate_energy(spins)
 
 cdef populate_nn():
-    '''Prepopulates an array of nearest neighbor indices, to speed utype
+    '''Prepopulates an array of nearest neighbor indices, to speed up
     calculation of the energy change.'''
 
     global nn1, nn2, nn1v, nn2v
