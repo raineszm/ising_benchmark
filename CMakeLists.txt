@@ -11,3 +11,5 @@ list(APPEND LIBS ${GSL_LIBRARIES})
 add_executable(ising ${ISING_SRCS})
 target_link_libraries(ising ${LIBS})
 set_property(TARGET ising PROPERTY CXX_STANDARD 11)
+
+set(CMAKE_BUILD_TYPE Release)

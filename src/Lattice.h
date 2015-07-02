@@ -9,6 +9,13 @@ class Lattice {
 
         Lattice() {
             sites.fill(1);
+            nnplus[N-1] = 0;
+            nnminus[0] = N - 1;
+
+            for(auto i = 0; i < N - 1; i++) {
+                nnplus[i] = i + 1;
+                nnminus[N - i] = N - i - 1;
+            }
         }
 
         int at(int i, int j) const {
@@ -27,10 +34,10 @@ class Lattice {
 
 
         int sum_neighbors(int i, int j) const {
-            return (at(i, (j+1)%N)
-                    + at(i, (N + j - 1)%N)
-                    + at((i + 1)%N, j)
-                    + at((N + i -1) % N, j));
+            return (at(i, nnplus[j])
+                    + at(i, nnminus[j])
+                    + at(nnplus[i], j)
+                    + at(nnminus[i], j));
         }
 
         int flip(int i, int j) {
@@ -51,5 +58,8 @@ class Lattice {
 
     protected:
         std::array<int, N*N> sites;
+
+        std::array<int, N> nnplus;
+        std::array<int, N> nnminus;
 
 };
