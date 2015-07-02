@@ -3,8 +3,7 @@ project(ising)
 
 find_package(GSL REQUIRED)
 set(ISING_SRCS
-    src/ising.cpp
-    src/Lattice.cpp)
+    src/ising.cpp)
 
 set(INCLUDE_DIRS src/ ${GSL_INCLUDE_DIRS})
 list(APPEND LIBS ${GSL_LIBRARIES})

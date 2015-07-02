@@ -1,15 +1,12 @@
 #include <stddef.h>
 #include <iostream>
-#include <random>
+#include <array>
 
 #include "Lattice.h"
 
-int deltaE(const Lattice& lat, int i, int j) {
-    int dE = 0;
-    for(auto neighbor : lat.neighbors(i, j)) {
-        dE += neighbor;
-    }
-    return 2*dE*lat.at(i, j);
+template <int N>
+inline int deltaE(const Lattice<N>& lat, int i, int j) {
+    return 2*lat.at(i, j)*lat.sum_neighbors(i, j);
 }
 
 template <class URNG>
@@ -17,9 +14,9 @@ inline double randpp(URNG& g) {
     return std::generate_canonical<double, std::numeric_limits<double>::digits>(g);
 }
 
-template <class URNG>
+template <class URNG, int N>
 bool metropolis_step(URNG& g,
-        Lattice& lat,
+        Lattice<N>& lat,
         double beta,
         int& dE,
         int& dM) {
@@ -38,10 +35,10 @@ bool metropolis_step(URNG& g,
     }
 }
 
-template <class URNG>
+template <class URNG, int N>
 void evolve(
         URNG& g,
-        Lattice& lat,
+        Lattice<N>& lat,
         int n,
         double beta) {
     int dE, dM;
@@ -51,12 +48,12 @@ void evolve(
     }
 }
 
-int evaluate_energy(const Lattice& lat) {
+template <int N>
+int evaluate_energy(const Lattice<N>& lat) {
     int total = 0;
-    int N = lat.N;
 
     for (auto i = 0; i < N; i++) {
-        for (auto j = 0; j < lat.N; j++) {
+        for (auto j = 0; j < N; j++) {
             total -= lat.at(i,j)*(
                     lat.at((i + 1) % N, j) +
                     lat.at(i, (j + 1) % N));
@@ -66,16 +63,16 @@ int evaluate_energy(const Lattice& lat) {
     return total;
 }
 
-template <class URNG>
+template <class URNG, int N>
 void time_average(
         URNG& g,
-        Lattice& lat,
+        Lattice<N>& lat,
         int n,
         double beta,
         double& en,
         double& mag) {
     int U = evaluate_energy(lat);
-    const std::vector<int>& sites = lat.get_sites();
+    const std::array<int, N*N>& sites = lat.get_sites();
     int M = std::accumulate(sites.begin(), sites.end(), 0);
     int U_tot = 0;
     int M_tot = 0;
@@ -93,10 +90,10 @@ void time_average(
     mag = (float) M/n;
 }
 
-template <class URNG>
+template <class URNG, int N>
 void ensemble_average(
         URNG& g,
-        Lattice& lat,
+        Lattice<N>& lat,
         double beta,
         int n_evolve,
         int n_average,
@@ -108,12 +105,12 @@ void ensemble_average(
 
 
 
-int main(int argc, char** argv) {
+int main(int, char**) {
 
-    int N = 64;
-    Lattice lat(N);
+    const int N = 64;
+    Lattice<N> lat;
     std::random_device rd;
-    std::default_random_engine rng(rd());
+    std::minstd_rand rng(rd());
 
     double en, mag;
 

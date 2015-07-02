@@ -1,26 +1,48 @@
-#include <vector>
+#include <array>
 #include <random>
 
+template <int N>
 class Lattice {
 
     public:
 
-        const int N;
+        Lattice() : random_site(0, N - 1) {
+            sites.fill(1);
+        }
 
-        Lattice(int N_);
+        int at(int i, int j) const {
+            return sites[j + N*i];
+        }
 
-        int at(int i, int j) const;
-        void fill(int s);
 
-        const std::vector<int>& get_sites() const;
+        void fill(int s) {
+            sites.fill(s);
+        }
 
-        const std::vector<int> neighbors(int i, int j) const;
 
-        int flip(int i, int j);
+        const std::array<int, N*N>& get_sites() const {
+            return sites;
+        }
+
+
+        int sum_neighbors(int i, int j) const {
+            return (at(i, (j+1)%N)
+                    + at(i, (N + j - 1)%N)
+                    + at((i + 1)%N, j)
+                    + at((N + i -1) % N, j));
+        }
+
+        int flip(int i, int j) {
+            int s = at(i, j);
+            sites[j + N*i] *= -s;
+            return s;
+        }
+
+        int get_N() const { return N; }
 
         std::uniform_int_distribution<int> random_site;
 
     protected:
-        std::vector<int> sites;
+        std::array<int, N*N> sites;
 
 };
