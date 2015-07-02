@@ -1,9 +1,13 @@
 #include <cstddef>
 #include <cstdlib>
 #include <cmath>
-#include <iostream>
 #include <array>
+#include <tuple>
+
 #include <random>
+
+#include <fstream>
+#include <iostream>
 
 #include "Lattice.h"
 
@@ -109,18 +113,36 @@ int main(int, char**) {
     srand(rd());
 
     double en, mag;
+    std::vector<double> ts;
+    std::vector<std::tuple<double, double, double>> data;
 
     double dt = (5 - 0.1)/400;
     double t = 0.1;
     for (int i = 0; i < 400; i ++) {
+        ts.push_back(t);
+        t += dt;
+    }
+
+    for (auto t: ts) {
         ensemble_average(lat, 1./t, 1000*N*N, 100*N*N, en, mag);
 
         if (fmod(t, 0.1) < 0.01) {
             std::cout << "T: " << t << std::endl;
-            std::cout << "U: " << en << std::endl;
-            std::cout << "M: " << mag<< std::endl;
         }
-        t += dt;
+        data.push_back(std::make_tuple(t, en, mag));
+    }
+
+    std::ofstream data_file("met.dat");
+
+    if (!data_file.is_open()) {
+        std::cerr << "Could not open data file" << std::endl;
+        return -1;
+    } else {
+        data_file << "T,M,U" << std::endl;
+        for(auto row : data) {
+            data_file << std::get<0>(row) << ", " <<
+                std::get<1>(row) << ", " << std::get<2>(row) << std::endl;
+        }
     }
 
     return 0;
