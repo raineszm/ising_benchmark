@@ -1,12 +1,13 @@
+#include <cstdlib>
 #include <array>
-#include <random>
+#include <algorithm>
 
 template <int N>
 class Lattice {
 
     public:
 
-        Lattice() : random_site(0, N - 1) {
+        Lattice() {
             sites.fill(1);
         }
 
@@ -40,7 +41,13 @@ class Lattice {
 
         int get_N() const { return N; }
 
-        std::uniform_int_distribution<int> random_site;
+        int random_site() {
+            return rand() % N;
+        }
+
+        int magnetization() {
+            return std::accumulate(sites.begin(), sites.end(), 0);
+        }
 
     protected:
         std::array<int, N*N> sites;
