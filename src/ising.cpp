@@ -27,7 +27,7 @@ void metropolis_step(
 
     dE = deltaE(lat, i, j);
 
-    if (dE < 0 || rand_double() < std::exp(-beta*dE)) {
+    if (dE < 0 || (rand_double() < std::exp(-beta*dE))) {
         dM = -2*lat.flip(i, j);
     } else {
         dE = 0;
@@ -54,8 +54,8 @@ int evaluate_energy(const Lattice<N>& lat) {
     for (auto i = 0; i < N; i++) {
         for (auto j = 0; j < N; j++) {
             total -= lat.at(i,j)*(
-                    lat.at((i + 1) % N, j) +
-                    lat.at(i, (j + 1) % N));
+                    lat.at(lat.nnplus(i), j) +
+                    lat.at(i, lat.nnminus(j)));
         }
     }
 
@@ -70,11 +70,10 @@ void time_average(
         double& en,
         double& mag) {
     int U = evaluate_energy(lat);
-
     int M = lat.magnetization();
 
-    int U_tot = 0;
-    int M_tot = 0;
+    long U_tot = 0;
+    long M_tot = 0;
     int dE, dM;
 
     for (auto i = 0; i < n; i++) {
@@ -85,8 +84,8 @@ void time_average(
         M_tot += M;
     }
 
-    en = static_cast<double>(U)/static_cast<double>(n);
-    mag = static_cast<double>(M)/static_cast<double>(n);
+    en = static_cast<double>(U_tot)/static_cast<double>(n);
+    mag = static_cast<double>(M_tot)/static_cast<double>(n);
 }
 
 template <int N>
@@ -114,7 +113,7 @@ int main(int, char**) {
     double dt = (5 - 0.1)/400;
     double t = 0.1;
     for (int i = 0; i < 400; i ++) {
-        ensemble_average(lat, 1/t, 1000*N*N, 100*N*N, en, mag);
+        ensemble_average(lat, 1./t, 1000*N*N, 100*N*N, en, mag);
 
         if (fmod(t, 0.1) < 0.01) {
             std::cout << "T: " << t << std::endl;
@@ -123,4 +122,6 @@ int main(int, char**) {
         }
         t += dt;
     }
+
+    return 0;
 }
