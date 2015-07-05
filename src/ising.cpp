@@ -1,14 +1,14 @@
 #include <cstddef>
-#include <cstdlib>
 #include <cmath>
 #include <array>
 #include <tuple>
 
-#include <random>
-
 #include <fstream>
 #include <iostream>
 
+#include <random>
+
+#include "ising.h"
 #include "Lattice.h"
 
 template <int N>
@@ -17,7 +17,7 @@ inline int deltaE(const Lattice<N>& lat, int i, int j) {
 }
 
 inline double rand_double() {
-    return static_cast<double>(rand()) / static_cast<double>(RAND_MAX);
+    return std::generate_canonical<double, 8>(rng);
 }
 
 template <int N>
@@ -110,7 +110,7 @@ int main(int, char**) {
     const int N = 64;
     Lattice<N> lat;
     std::random_device rd;
-    srand(rd());
+    rng.seed(rd());
 
     double en, mag;
     std::vector<double> ts;

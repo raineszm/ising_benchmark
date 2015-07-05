@@ -1,6 +1,10 @@
+#pragma once
 #include <cstdlib>
 #include <array>
 #include <algorithm>
+#include <random>
+
+#include "ising.h"
 
 template <int N>
 class Lattice {
@@ -48,8 +52,8 @@ class Lattice {
 
         int get_N() const { return N; }
 
-        int random_site() const {
-            return rand() % N;
+        inline int random_site() const {
+            return rng() % N;
         }
 
         int magnetization() const {
