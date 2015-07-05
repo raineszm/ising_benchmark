@@ -53,7 +53,7 @@ class Lattice {
         int get_N() const { return N; }
 
         inline int random_site() const {
-            return rng() % N;
+            return rng()/(rng.max()/N + 1);
         }
 
         int magnetization() const {
