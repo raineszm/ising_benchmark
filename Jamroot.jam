@@ -1,0 +1,2 @@
+exe ising : src/ising.cpp : <variant>release <optimization>speed <cxxflags>-std=c++11 ;
+install bin : ising ;
