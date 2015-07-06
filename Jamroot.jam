@@ -1,2 +1,2 @@
-exe ising : src/ising.cpp : <variant>release <optimization>speed <cxxflags>-std=c++11 ;
+exe ising : src/ising.cpp : <variant>release <optimization>speed <cxxflags>"-std=c++11" <threading>multi ;
 install bin : ising ;

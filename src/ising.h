@@ -1,3 +1,3 @@
 #pragma once
-std::minstd_rand rng;
+thread_local std::minstd_rand rng;
 

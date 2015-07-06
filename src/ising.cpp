@@ -2,6 +2,11 @@
 #include <cmath>
 #include <array>
 #include <tuple>
+#include <algorithm>
+#include <iterator>
+#include <queue>
+#include <mutex>
+#include <future>
 
 #include <fstream>
 #include <iostream>
@@ -10,6 +15,9 @@
 
 #include "ising.h"
 #include "Lattice.h"
+
+const int N = 64;
+const int NUM_THREADS = 4;
 
 template <int N>
 inline int deltaE(const Lattice<N>& lat, int i, int j) {
@@ -104,32 +112,71 @@ void ensemble_average(
     time_average(lat, n_average, beta, en, mag);
 }
 
+using data_vector = std::vector<std::tuple<double, double, double>>;
 
 int main(int, char**) {
 
-    const int N = 64;
     Lattice<N> lat;
     std::random_device rd;
     rng.seed(rd());
 
-    double en, mag;
-    std::vector<double> ts;
-    std::vector<std::tuple<double, double, double>> data;
+    std::queue<double> ts;
+    data_vector data;
 
+    //Build vector of temperatures
     double dt = (5 - 0.1)/400;
     double t = 0.1;
     for (int i = 0; i < 400; i ++) {
-        ts.push_back(t);
+        ts.push(t);
         t += dt;
     }
 
-    for (auto t: ts) {
-        ensemble_average(lat, 1./t, 1000*N*N, 100*N*N, en, mag);
+    std::vector<std::future<data_vector>> futures;
+    std::mutex mtx;
 
-        if (fmod(t, 0.1) < 0.01) {
-            std::cout << "T: " << t << std::endl;
-        }
-        data.push_back(std::make_tuple(t, en, mag));
+    for (auto i = 0; i < NUM_THREADS; i++) {
+        futures.push_back(std::async(
+            std::launch::async,
+            [&ts, &mtx](){
+            Lattice<N> lat;
+            std::random_device rd;
+            rng.seed(rd());
+
+            double en, mag, t;
+            data_vector local_data;
+
+            while(true) {
+                {
+                    std::unique_lock<std::mutex> lck(mtx);
+
+                    if (ts.empty()) {
+
+                        break;
+                    }
+
+                    t = ts.front();
+                    ts.pop();
+
+                    if (fmod(t, 0.1) < 0.01) {
+                        std::cout << "T: " << t << std::endl;
+                    }
+
+                }
+
+                ensemble_average(lat, 1./t, 1000*N*N, 100*N*N, en, mag);
+
+
+
+                local_data.push_back(std::make_tuple(t, en, mag));
+            }
+
+            return local_data;
+        }));
+    }
+
+    for (auto i = 0; i < NUM_THREADS; i++) {
+        data_vector local_data = futures[i].get();
+        std::move(local_data.begin(), local_data.end(), std::back_inserter(data));
     }
 
     std::ofstream data_file("met.dat");
