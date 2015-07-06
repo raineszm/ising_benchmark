@@ -53,7 +53,9 @@ class Lattice {
         int get_N() const { return N; }
 
         inline int random_site() const {
-            return rng()/(rng.max()/N + 1);
+        std::minstd_rand *rng =
+            static_cast<std::minstd_rand*>(pthread_getspecific(rng_key));
+            return (*rng)()/(rng->max()/N + 1);
         }
 
         int magnetization() const {

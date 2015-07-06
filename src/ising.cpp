@@ -12,6 +12,7 @@
 #include <iostream>
 
 #include <random>
+#include <pthread.h>
 
 #include "ising.h"
 #include "Lattice.h"
@@ -25,7 +26,9 @@ inline int deltaE(const Lattice<N>& lat, int i, int j) {
 }
 
 inline double rand_double() {
-    return std::generate_canonical<double, 8>(rng);
+    std::minstd_rand *rng =
+        static_cast<std::minstd_rand*>(pthread_getspecific(rng_key));
+    return std::generate_canonical<double, 8>(*rng);
 }
 
 template <int N>
@@ -114,11 +117,48 @@ void ensemble_average(
 
 using data_vector = std::vector<std::tuple<double, double, double>>;
 
+data_vector metropolis_subset(std::queue<double>& ts, std::mutex& mtx) {
+        Lattice<N> lat;
+        std::random_device rd;
+        std::minstd_rand rng(rd());
+        pthread_setspecific(rng_key, &rng);
+
+        double en, mag, t;
+        data_vector local_data;
+
+        while(true) {
+            {
+                std::unique_lock<std::mutex> lck(mtx);
+
+                if (ts.empty()) {
+
+                    break;
+                }
+
+                t = ts.front();
+                ts.pop();
+
+                if (fmod(t, 0.1) < 0.01) {
+                    std::cout << "T: " << t << std::endl;
+                }
+
+            }
+
+            ensemble_average(lat, 1./t, 1000*N*N, 100*N*N, en, mag);
+
+
+
+            local_data.push_back(std::make_tuple(t, en, mag));
+        }
+
+        return local_data;
+}
+
 int main(int, char**) {
 
     Lattice<N> lat;
     std::random_device rd;
-    rng.seed(rd());
+    pthread_key_create(&rng_key, NULL);
 
     std::queue<double> ts;
     data_vector data;
@@ -137,47 +177,17 @@ int main(int, char**) {
     for (auto i = 0; i < NUM_THREADS; i++) {
         futures.push_back(std::async(
             std::launch::async,
-            [&ts, &mtx](){
-            Lattice<N> lat;
-            std::random_device rd;
-            rng.seed(rd());
-
-            double en, mag, t;
-            data_vector local_data;
-
-            while(true) {
-                {
-                    std::unique_lock<std::mutex> lck(mtx);
-
-                    if (ts.empty()) {
-
-                        break;
-                    }
-
-                    t = ts.front();
-                    ts.pop();
-
-                    if (fmod(t, 0.1) < 0.01) {
-                        std::cout << "T: " << t << std::endl;
-                    }
-
-                }
-
-                ensemble_average(lat, 1./t, 1000*N*N, 100*N*N, en, mag);
-
-
-
-                local_data.push_back(std::make_tuple(t, en, mag));
-            }
-
-            return local_data;
-        }));
+            [&ts, &mtx]() {
+                return metropolis_subset(ts, mtx);
+            }));
     }
 
     for (auto i = 0; i < NUM_THREADS; i++) {
         data_vector local_data = futures[i].get();
         std::move(local_data.begin(), local_data.end(), std::back_inserter(data));
     }
+
+    pthread_key_delete(rng_key);
 
     std::ofstream data_file("met.dat");
 
