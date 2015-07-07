@@ -133,6 +133,7 @@ fn ensemble_average(lat: &mut Lattice,
     time_average(lat, n_average, beta)
 }
 
+#[allow(non_snake_case)]
 fn main() {
     let N: i32 = 64;
     let mut lat = Lattice::new(N as usize);
@@ -143,25 +144,27 @@ fn main() {
                            ).collect::<Vec<_>>();
 
 
-    let mut data: Vec<(f64, f64, f64)> = Vec::new();
-    for t in &ts {
+    // let mut data: Vec<(f64, f64, f64)> = Vec::new();
+    // for t in &ts {
+    let data = ts.iter().map( |t| {
         let (U, M) = ensemble_average(&mut lat, 1./t, 1000*N*N, 100*N*N);
 
         if t % 0.1 < 0.01 {
             println!("T: {}", t);
         }
 
-        data.push((t.clone(), M, U));
+        (t.clone(), M, U)
+    }).collect::<Vec<_>>();
+
+    let mut f = File::create("met.dat")
+        .ok()
+        .expect("Unable to open data file.");
+
+    writeln!(&mut f, "T,M,U").unwrap();
+
+    for point in &data {
+        let (t, M, U) = *point;
+        writeln!(f, "{}, {}, {}", t, M, U).unwrap();
     }
-
-    let mut f = try!(File::open("dat.mat"));
-        // .ok()
-        // .expect("Unable to open data file.");
-
-    // writeln!(&mut f, "T,M,U");
-
-    // for point in &data {
-    //     writeln!(&mut f, "{}, {}, {}", point.0, point.1, point.2);
-    // }
 
 }
