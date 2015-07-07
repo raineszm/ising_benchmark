@@ -3,6 +3,9 @@ extern crate rand;
 use rand::{XorShiftRng, Rng};
 use rand::distributions::{Range, IndependentSample};
 
+use std::fs::File;
+use std::io::Write;
+
 struct Lattice {
     n: usize,
     sites: Vec<i32>,
@@ -105,8 +108,6 @@ fn time_average(lat: &mut Lattice,
 
     let mut M_tot: i64 = 0;
     let mut U_tot: i64 = 0;
-    let mut dE: i32 = 0;
-    let mut dM: i32 = 0;
 
     for _ in 0..n {
         let (dE, dM) = metropolis_step(lat, beta);
@@ -135,20 +136,32 @@ fn ensemble_average(lat: &mut Lattice,
 fn main() {
     let N: i32 = 64;
     let mut lat = Lattice::new(N as usize);
-    let mut t = 0.1;
     let dt: f64 = (5. - 0.1)/400.;
 
+    let ts = (0..400).map( |i|
+                           0.1 + (i as f64)*dt
+                           ).collect::<Vec<_>>();
 
-    for _ in 0..400 {
 
+    let mut data: Vec<(f64, f64, f64)> = Vec::new();
+    for t in &ts {
         let (U, M) = ensemble_average(&mut lat, 1./t, 1000*N*N, 100*N*N);
 
         if t % 0.1 < 0.01 {
             println!("T: {}", t);
-            println!("U: {}", U);
-            println!("M: {}", M);
         }
 
-        t += dt;
+        data.push((t.clone(), M, U));
     }
+
+    let mut f = try!(File::open("dat.mat"));
+        // .ok()
+        // .expect("Unable to open data file.");
+
+    // writeln!(&mut f, "T,M,U");
+
+    // for point in &data {
+    //     writeln!(&mut f, "{}, {}, {}", point.0, point.1, point.2);
+    // }
+
 }
