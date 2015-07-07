@@ -1,12 +1,16 @@
 extern crate rand;
 
 mod system;
-
 use system::System;
 
 use rand::Rng;
 use std::fs::File;
 use std::io::Write;
+
+use std::collections::VecDeque;
+
+use std::sync::{Arc, Mutex};
+use std::thread;
 
 
 
@@ -72,24 +76,43 @@ fn ensemble_average(sys: &mut System,
 
 #[allow(non_snake_case)]
 fn main() {
-    let N: i32 = 64;
-    let mut sys = System::new(N as usize);
+    const N: i32 = 64;
+    const NUM_THREADS: usize = 4;
     let dt: f64 = (5. - 0.1)/400.;
 
     let ts = (0..400).map( |i|
                            0.1 + (i as f64)*dt
-                           ).collect::<Vec<_>>();
+                           ).collect::<VecDeque<_>>();
 
+    let ts = Arc::new(Mutex::new(ts));
 
-    let data = ts.iter().map( |t| {
-        let (U, M) = ensemble_average(&mut sys, 1./t, 1000*N*N, 100*N*N);
+    let handles = (0..NUM_THREADS).map(|_| {
+        let ts = ts.clone();
+        thread::spawn(move || {
+            let mut sys = System::new(N as usize);
+            let mut data: Vec<(f64, f64, f64)> = Vec::with_capacity(400/NUM_THREADS);
 
-        if t % 0.1 < 0.01 {
-            println!("T: {}", t);
-        }
+            loop {
+                let mut lock = ts.lock().unwrap();
+                let pop = lock.pop_front();
+                drop(lock);
 
-        (t.clone(), M, U)
+                if let Some(t) = pop {
+                    if t % 0.1 < 0.01 {
+                        println!("{}", t);
+                    }
+                    let (U, M) = ensemble_average(&mut sys, 1./t, 1000*N*N, 100*N*N);
+                    data.push((t, M, U));
+                } else {
+                    break;
+                }
+            }
+
+            data
+        })
     }).collect::<Vec<_>>();
+
+
 
     let mut f = File::create("met.dat")
         .ok()
@@ -97,9 +120,12 @@ fn main() {
 
     writeln!(&mut f, "T,M,U").unwrap();
 
-    for point in &data {
-        let (t, M, U) = *point;
-        writeln!(f, "{}, {}, {}", t, M, U).unwrap();
+    for h in handles {
+        let thread_data = h.join().unwrap();
+        for point in &thread_data {
+            let (t, M, U) = *point;
+            writeln!(f, "{}, {}, {}", t, M, U).unwrap();
+        }
     }
 
 }
