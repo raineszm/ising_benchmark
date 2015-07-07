@@ -1,7 +1,7 @@
 extern crate rand;
 
-use self::rand::XorShiftRng;
-use self::rand::distributions::{Range, IndependentSample};
+use std::u32;
+use self::rand::{Rng, XorShiftRng};
 
 pub struct System {
     n: usize,
@@ -9,7 +9,6 @@ pub struct System {
     nnplus: Vec<usize>,
     nnminus: Vec<usize>,
     pub rng: XorShiftRng,
-    site_range: Range<usize>,
 }
 
 impl System {
@@ -20,7 +19,6 @@ impl System {
             nnplus: (0..n).map(|i| (i + 1) % n).collect(),
             nnminus: (0..n).map(|i| (n + i - 1) % n).collect(),
             rng: rand::weak_rng(),
-            site_range: Range::new(0, n),
         }
     }
 
@@ -59,7 +57,7 @@ impl System {
     }
 
     pub fn random_site(&mut self) -> usize {
-        self.site_range.ind_sample(&mut self.rng)
+        (self.rng.next_u32()/(u32::MAX/(self.n as u32) + 1)) as usize
     }
 
     #[allow(non_snake_case)]
