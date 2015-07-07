@@ -28,9 +28,7 @@ impl System {
     }
 
     fn at(&self, i: usize, j: usize) -> i32 {
-        unsafe {
-            *self.sites.get_unchecked(j + self.n*i)
-        }
+        self.sites[j + self.n*i]
     }
 
     fn flip(&mut self, i: usize, j: usize) -> i32 {
@@ -40,12 +38,10 @@ impl System {
     }
 
     fn sum_neighbors(&self, i: usize, j:usize) -> i32 {
-        unsafe {
-           self.at(i, *self.nnplus.get_unchecked(j))
-                + self.at(i, *self.nnminus.get_unchecked(j))
-                + self.at(*self.nnplus.get_unchecked(i), j)
-                + self.at(*self.nnminus.get_unchecked(i), j)
-        }
+       self.at(i, self.nnplus[j])
+            + self.at(i, self.nnminus[j])
+            + self.at(self.nnplus[i], j)
+            + self.at(self.nnminus[i], j)
     }
 
     fn magnetization(&self) -> i32 {
