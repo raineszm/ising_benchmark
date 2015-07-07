@@ -74,6 +74,14 @@ fn ensemble_average(sys: &mut System,
     time_average(sys, n_average, beta)
 }
 
+fn next_t<T>(ts: &Arc<Mutex<VecDeque<T>>>)
+    -> Option<T> {
+        let mut lock = ts.lock().unwrap();
+        let pop = lock.pop_front();
+        drop(lock);
+        pop
+    }
+
 #[allow(non_snake_case)]
 fn main() {
     const N: i32 = 64;
@@ -90,22 +98,15 @@ fn main() {
         let ts = ts.clone();
         thread::spawn(move || {
             let mut sys = System::new(N as usize);
-            let mut data: Vec<(f64, f64, f64)> = Vec::with_capacity(400/NUM_THREADS);
+            let mut data
+                = Vec::with_capacity(400/NUM_THREADS);
 
-            loop {
-                let mut lock = ts.lock().unwrap();
-                let pop = lock.pop_front();
-                drop(lock);
-
-                if let Some(t) = pop {
-                    if t % 0.1 < 0.01 {
-                        println!("{}", t);
-                    }
-                    let (U, M) = ensemble_average(&mut sys, 1./t, 1000*N*N, 100*N*N);
-                    data.push((t, M, U));
-                } else {
-                    break;
+            while let Some(t) = next_t(&ts) {
+                if t % 0.1 < 0.01 {
+                    println!("{}", t);
                 }
+                let (U, M) = ensemble_average(&mut sys, 1./t, 1000*N*N, 100*N*N);
+                data.push((t, M, U));
             }
 
             data
@@ -124,7 +125,9 @@ fn main() {
         let thread_data = h.join().unwrap();
         for point in &thread_data {
             let (t, M, U) = *point;
-            writeln!(f, "{}, {}, {}", t, M, U).unwrap();
+            writeln!(f, "{}, {}, {}", t, M, U)
+                .ok()
+                .expect("Unable to write to file.");
         }
     }
 
