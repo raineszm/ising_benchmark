@@ -1,11 +1,15 @@
 extern crate rand;
-use rand::Rng;
+
+use rand::{XorShiftRng, Rng};
+use rand::distributions::{Range, IndependentSample};
 
 struct Lattice {
     n: usize,
     sites: Vec<i32>,
     nnplus: Vec<usize>,
     nnminus: Vec<usize>,
+    rng: XorShiftRng,
+    site_range: Range<usize>,
 }
 
 impl Lattice {
@@ -15,6 +19,8 @@ impl Lattice {
             sites: vec![1; n*n],
             nnplus: (0..n).map(|i| (i + 1) % n).collect(),
             nnminus: (0..n).map(|i| (n + i - 1) % n).collect(),
+            rng: rand::weak_rng(),
+            site_range: Range::new(0, n),
         }
     }
 
@@ -24,24 +30,23 @@ impl Lattice {
 
     fn flip(&mut self, i: usize, j: usize) -> i32 {
         let s = self.at(i, j);
-        self.sites[j + self.n*i] = s;
+        self.sites[j + self.n*i] = -s;
         s
     }
 
     fn sum_neighbors(&self, i: usize, j:usize) -> i32 {
-        self.at(i, j)*(
-            self.at(i, self.nnplus[j])
+       self.at(i, self.nnplus[j])
             + self.at(i, self.nnminus[j])
             + self.at(self.nnplus[i], j)
-            + self.at(self.nnminus[i], j))
+            + self.at(self.nnminus[i], j)
     }
 
     fn magnetization(&self) -> i32 {
         self.sites.iter().fold(0, |acc, &s| acc + s)
     }
 
-    fn random_site(&self) -> usize {
-        rand::thread_rng().gen_range(0, self.n)
+    fn random_site(&mut self) -> usize {
+        self.site_range.ind_sample(&mut self.rng)
     }
 
 }
@@ -59,7 +64,7 @@ fn metropolis_step(lat: &mut Lattice,
 
     let dE = deltaE(lat, i, j);
 
-    if dE < 0 || rand::random::<f64>() < (-beta*(dE as f64)).exp() {
+    if dE < 0 || (lat.rng.next_f64() < (-beta*(dE as f64)).exp() ){
         return (dE, -2*lat.flip(i, j));
     }
 
@@ -100,8 +105,10 @@ fn time_average(lat: &mut Lattice,
 
     let mut M_tot: i64 = 0;
     let mut U_tot: i64 = 0;
+    let mut dE: i32 = 0;
+    let mut dM: i32 = 0;
 
-    for _i in 0..n {
+    for _ in 0..n {
         let (dE, dM) = metropolis_step(lat, beta);
 
         U += dE;
@@ -131,12 +138,16 @@ fn main() {
     let mut t = 0.1;
     let dt: f64 = (5. - 0.1)/400.;
 
-    for _i in 0..400 {
+
+    for _ in 0..400 {
 
         let (U, M) = ensemble_average(&mut lat, 1./t, 1000*N*N, 100*N*N);
-        println!("T: {}", t);
-        println!("U: {}", U);
-        println!("M: {}", M);
+
+        if t % 0.1 < 0.01 {
+            println!("T: {}", t);
+            println!("U: {}", U);
+            println!("M: {}", M);
+        }
 
         t += dt;
     }
