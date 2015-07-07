@@ -6,7 +6,7 @@ use rand::distributions::{Range, IndependentSample};
 use std::fs::File;
 use std::io::Write;
 
-struct Lattice {
+struct System {
     n: usize,
     sites: Vec<i32>,
     nnplus: Vec<usize>,
@@ -15,9 +15,9 @@ struct Lattice {
     site_range: Range<usize>,
 }
 
-impl Lattice {
-    fn new(n: usize) -> Lattice {
-        Lattice {
+impl System {
+    fn new(n: usize) -> System {
+        System {
             n: n,
             sites: vec![1; n*n],
             nnplus: (0..n).map(|i| (i + 1) % n).collect(),
@@ -28,7 +28,9 @@ impl Lattice {
     }
 
     fn at(&self, i: usize, j: usize) -> i32 {
-        self.sites[j + self.n*i]
+        unsafe {
+            *self.sites.get_unchecked(j + self.n*i)
+        }
     }
 
     fn flip(&mut self, i: usize, j: usize) -> i32 {
@@ -38,10 +40,12 @@ impl Lattice {
     }
 
     fn sum_neighbors(&self, i: usize, j:usize) -> i32 {
-       self.at(i, self.nnplus[j])
-            + self.at(i, self.nnminus[j])
-            + self.at(self.nnplus[i], j)
-            + self.at(self.nnminus[i], j)
+        unsafe {
+           self.at(i, *self.nnplus.get_unchecked(j))
+                + self.at(i, *self.nnminus.get_unchecked(j))
+                + self.at(*self.nnplus.get_unchecked(i), j)
+                + self.at(*self.nnminus.get_unchecked(i), j)
+        }
     }
 
     fn magnetization(&self) -> i32 {
@@ -52,65 +56,65 @@ impl Lattice {
         self.site_range.ind_sample(&mut self.rng)
     }
 
+    #[allow(non_snake_case)]
+    fn deltaE(&self, i: usize, j:usize) -> i32 {
+        2*self.at(i, j)*self.sum_neighbors(i, j)
+    }
 }
 
-#[allow(non_snake_case)]
-fn deltaE(lat: &Lattice, i: usize, j:usize) -> i32 {
-    2*lat.at(i, j)*lat.sum_neighbors(i, j)
-}
 
 #[allow(non_snake_case)]
-fn metropolis_step(lat: &mut Lattice,
+fn metropolis_step(sys: &mut System,
                    beta: f64) -> (i32, i32) {
-    let i = lat.random_site();
-    let j = lat.random_site();
+    let i = sys.random_site();
+    let j = sys.random_site();
 
-    let dE = deltaE(lat, i, j);
+    let dE = sys.deltaE(i, j);
 
-    if dE < 0 || (lat.rng.next_f64() < (-beta*(dE as f64)).exp() ){
-        return (dE, -2*lat.flip(i, j));
+    if dE < 0 || (sys.rng.next_f64() < (-beta*(dE as f64)).exp() ){
+        return (dE, -2*sys.flip(i, j));
     }
 
     (0, 0)
 }
 
-fn evolve(lat: &mut Lattice,
+fn evolve(sys: &mut System,
           n: i32,
           beta: f64) {
 
     for _i in 0..n {
-        metropolis_step(lat, beta);
+        metropolis_step(sys, beta);
     }
 }
 
-fn evaluate_energy(lat: &Lattice) -> i32 {
-    let n = lat.n;
+fn evaluate_energy(sys: &System) -> i32 {
+    let n = sys.n;
     let mut total = 0;
 
     for i in 0..n {
         for j in 0..n {
-            total -= lat.at(i,j)*(
-                lat.at(lat.nnplus[i], j) +
-                lat.at(i, lat.nnplus[j]))
+            total -= sys.at(i,j)*(
+                sys.at(sys.nnplus[i], j) +
+                sys.at(i, sys.nnplus[j]))
         }
     }
     total
 }
 
 #[allow(non_snake_case)]
-fn time_average(lat: &mut Lattice,
+fn time_average(sys: &mut System,
                 n: i32,
                 beta: f64) -> (f64, f64) {
 
-    let mut U = evaluate_energy(lat);
-    let mut M = lat.magnetization();
+    let mut U = evaluate_energy(sys);
+    let mut M = sys.magnetization();
 
 
     let mut M_tot: i64 = 0;
     let mut U_tot: i64 = 0;
 
     for _ in 0..n {
-        let (dE, dM) = metropolis_step(lat, beta);
+        let (dE, dM) = metropolis_step(sys, beta);
 
         U += dE;
         M += dM;
@@ -125,18 +129,18 @@ fn time_average(lat: &mut Lattice,
     (en, mag)
 }
 
-fn ensemble_average(lat: &mut Lattice,
+fn ensemble_average(sys: &mut System,
                     beta: f64,
                     n_evolve: i32,
                     n_average: i32) -> (f64, f64) {
-    evolve(lat, n_evolve, beta);
-    time_average(lat, n_average, beta)
+    evolve(sys, n_evolve, beta);
+    time_average(sys, n_average, beta)
 }
 
 #[allow(non_snake_case)]
 fn main() {
     let N: i32 = 64;
-    let mut lat = Lattice::new(N as usize);
+    let mut sys = System::new(N as usize);
     let dt: f64 = (5. - 0.1)/400.;
 
     let ts = (0..400).map( |i|
@@ -144,10 +148,8 @@ fn main() {
                            ).collect::<Vec<_>>();
 
 
-    // let mut data: Vec<(f64, f64, f64)> = Vec::new();
-    // for t in &ts {
     let data = ts.iter().map( |t| {
-        let (U, M) = ensemble_average(&mut lat, 1./t, 1000*N*N, 100*N*N);
+        let (U, M) = ensemble_average(&mut sys, 1./t, 1000*N*N, 100*N*N);
 
         if t % 0.1 < 0.01 {
             println!("T: {}", t);
