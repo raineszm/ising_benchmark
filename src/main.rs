@@ -44,6 +44,19 @@ impl System {
             + self.at(self.nnminus[i], j)
     }
 
+    fn evaluate_energy(&self) -> i32 {
+        let mut total = 0;
+
+        for i in 0..self.n {
+            for j in 0..self.n {
+                total -= self.at(i, j)*(
+                    self.at(self.nnplus[i], j) +
+                    self.at(i, self.nnplus[j]))
+            }
+        }
+        total
+    }
+
     fn magnetization(&self) -> i32 {
         self.sites.iter().fold(0, |acc, &s| acc + s)
     }
@@ -83,26 +96,12 @@ fn evolve(sys: &mut System,
     }
 }
 
-fn evaluate_energy(sys: &System) -> i32 {
-    let n = sys.n;
-    let mut total = 0;
-
-    for i in 0..n {
-        for j in 0..n {
-            total -= sys.at(i,j)*(
-                sys.at(sys.nnplus[i], j) +
-                sys.at(i, sys.nnplus[j]))
-        }
-    }
-    total
-}
-
 #[allow(non_snake_case)]
 fn time_average(sys: &mut System,
                 n: i32,
                 beta: f64) -> (f64, f64) {
 
-    let mut U = evaluate_energy(sys);
+    let mut U = sys.evaluate_energy();
     let mut M = sys.magnetization();
 
 
