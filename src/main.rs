@@ -86,11 +86,15 @@ fn next_t<T>(ts: &Arc<Mutex<VecDeque<T>>>)
 fn main() {
     const N: i32 = 64;
     const NUM_THREADS: usize = 4;
-    let dt: f64 = (5. - 0.1)/400.;
+    const T0: f64 = 0.1;
+    const TF: f64 = 5.;
+    const STEPS: u32= 400;
 
-    let ts = (0..400).map( |i|
-                           0.1 + (i as f64)*dt
-                           ).collect::<VecDeque<_>>();
+    let dt = (TF - T0)/(STEPS as f64 - 1.);
+
+    let ts = (0..STEPS)
+        .map(|i| T0 + (i as f64)*dt)
+        .collect::<VecDeque<_>>();
 
     let ts = Arc::new(Mutex::new(ts));
 
