@@ -12,10 +12,28 @@ use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
+/// Number of threads to parallelize computation over.
+pub const NUM_THREADS: usize = 4;
 
+/// Linear dimension of the Lattice.
+pub const N: i32 = 64;
+
+/// Lowest temperature to consider.
+pub const T0: f64 = 0.1;
+/// Highest temperature to consider.
+pub const TF: f64 = 5.;
+/// Number of temperatures.
+pub const STEPS: u32 = 400;
 
 #[allow(non_snake_case)]
-fn metropolis_step(sys: &mut System,
+/// Perform one step of the Metropolis algorithm
+///
+/// We pick a random site on the lattice and propose
+/// flipping it.
+/// This change is accepted with probability `exp(-dE/T)`
+/// where `dE` is the change in the energy due to the flip
+/// and `T` is the temperature of the system.
+pub fn metropolis_step(sys: &mut System,
                    beta: f64) -> (i32, i32) {
     let i = sys.random_site();
     let j = sys.random_site();
@@ -29,7 +47,12 @@ fn metropolis_step(sys: &mut System,
     (0, 0)
 }
 
-fn evolve(sys: &mut System,
+/// Evolve the system for `n` steps.
+///
+/// We propose `n` changes to the system which are
+/// accepted or rejected according to their Boltzmann factor.
+/// Observables are not tracked.
+pub fn evolve(sys: &mut System,
           n: i32,
           beta: f64) {
 
@@ -39,7 +62,11 @@ fn evolve(sys: &mut System,
 }
 
 #[allow(non_snake_case)]
-fn time_average(sys: &mut System,
+/// Accumulate the energy and magenization of the system over `n` steps.
+///
+/// We perform `n` [Metropolis steps](metropolis_step), noting the energy and
+/// magnetization at each step. We then return the average of these quantities.
+pub fn time_average(sys: &mut System,
                 n: i32,
                 beta: f64) -> (f64, f64) {
 
@@ -66,7 +93,14 @@ fn time_average(sys: &mut System,
     (en, mag)
 }
 
-fn ensemble_average(sys: &mut System,
+/// Perform a Monte carlo average of magnetization and energy after a burn in phase.
+///
+/// We burn in the Markov chain by first [evolve]()ing `n_evolve` steps, then average the
+/// magnetization over `n_average` steps.
+/// We employ the [Metropolis-Hastings
+/// algorithm](https://en.wikipedia.org/wiki/Metropolis%E2%80%93Hastings_algorithm) to compute the
+/// averages.
+pub fn ensemble_average(sys: &mut System,
                     beta: f64,
                     n_evolve: i32,
                     n_average: i32) -> (f64, f64) {
@@ -84,14 +118,16 @@ fn next_t<T>(ts: &Arc<Mutex<VecDeque<T>>>)
 
 #[allow(non_snake_case)]
 fn main() {
-    const N: i32 = 64;
-    const NUM_THREADS: usize = 4;
-    const T0: f64 = 0.1;
-    const TF: f64 = 5.;
-    const STEPS: u32= 400;
 
+    // Note the -1. This ensures that we actually reach TF
     let dt = (TF - T0)/(STEPS as f64 - 1.);
 
+    // This is a Deque so that threads can grab the next
+    // temperature as needed.
+    //
+    // We want to go from low temperature to high, so using
+    // a Deque means we don't have to reverse `ts` for
+    // proper pop semantics.
     let ts = (0..STEPS)
         .map(|i| T0 + (i as f64)*dt)
         .collect::<VecDeque<_>>();
@@ -99,7 +135,9 @@ fn main() {
     let ts = Arc::new(Mutex::new(ts));
 
     let handles = (0..NUM_THREADS).map(|_| {
+
         let ts = ts.clone();
+
         thread::spawn(move || {
             let mut sys = System::new(N as usize);
             let mut data
@@ -109,7 +147,9 @@ fn main() {
                 if t % 0.1 < 0.01 {
                     println!("{}", t);
                 }
-                let (U, M) = ensemble_average(&mut sys, 1./t, 1000*N*N, 100*N*N);
+                let (U, M) =
+                    ensemble_average(&mut sys, 1./t, 1000*N*N, 100*N*N);
+
                 data.push((t, M, U));
             }
 
@@ -126,9 +166,13 @@ fn main() {
     writeln!(&mut f, "T,M,U").unwrap();
 
     for h in handles {
+
         let thread_data = h.join().unwrap();
+
         for point in &thread_data {
+
             let (t, M, U) = *point;
+
             writeln!(f, "{}, {}, {}", t, M, U)
                 .ok()
                 .expect("Unable to write to file.");
