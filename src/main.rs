@@ -1,6 +1,6 @@
 extern crate rand;
 
-mod system;
+pub mod system;
 use system::System;
 
 use rand::Rng;
