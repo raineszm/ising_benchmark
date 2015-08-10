@@ -40,11 +40,11 @@ pub fn metropolis_step(sys: &mut System,
 
     let dE = sys.deltaE(i, j);
 
-    if dE < 0 || (sys.rng.next_f64() < (-beta*(dE as f64)).exp() ){
-        return (dE, -2*sys.flip(i, j));
+    if dE < 0 || (sys.rng.next_f64() < (-beta*(dE as f64)).exp()) {
+        (dE, -2*sys.flip(i, j))
+    } else {
+        (0, 0)
     }
-
-    (0, 0)
 }
 
 /// Evolve the system for `n` steps.
@@ -55,10 +55,7 @@ pub fn metropolis_step(sys: &mut System,
 pub fn evolve(sys: &mut System,
           n: i32,
           beta: f64) {
-
-    for _i in 0..n {
-        metropolis_step(sys, beta);
-    }
+    for _ in 0..n { metropolis_step(sys, beta); }
 }
 
 #[allow(non_snake_case)]
@@ -110,10 +107,7 @@ pub fn ensemble_average(sys: &mut System,
 
 fn next_t<T>(ts: &Arc<Mutex<VecDeque<T>>>)
     -> Option<T> {
-        let mut lock = ts.lock().unwrap();
-        let pop = lock.pop_front();
-        drop(lock);
-        pop
+        ts.lock().unwrap().pop_front()
     }
 
 #[allow(non_snake_case)]
@@ -169,9 +163,9 @@ fn main() {
 
         let thread_data = h.join().unwrap();
 
-        for point in &thread_data {
+        for point in thread_data {
 
-            let (t, M, U) = *point;
+            let (t, M, U) = point;
 
             writeln!(f, "{}, {}, {}", t, M, U)
                 .ok()
