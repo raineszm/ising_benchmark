@@ -23,7 +23,7 @@ pub const T0: f64 = 0.1;
 /// Highest temperature to consider.
 pub const TF: f64 = 5.;
 /// Number of temperatures.
-pub const STEPS: u32 = 400;
+pub const STEPS: usize = 400;
 
 #[allow(non_snake_case)]
 /// Perform one step of the Metropolis algorithm
@@ -135,7 +135,7 @@ fn main() {
         thread::spawn(move || {
             let mut sys = System::new(N as usize);
             let mut data
-                = Vec::with_capacity(400/NUM_THREADS);
+                = Vec::with_capacity(STEPS/NUM_THREADS);
 
             while let Some(t) = next_t(&ts) {
                 if t % 0.1 < 0.01 {
