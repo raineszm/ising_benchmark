@@ -57,17 +57,17 @@ def make_simulation(N):
     return Simulation(N, l)
 
 
-@jit
+@jit(nopython=True)
 def randint(n):
     return np.random.randint(0, n)
 
 
-@jit
+@jit(nopython=True)
 def randfloat():
     return np.random.random()
 
 
-@jit
+@jit(nopython=True)
 def accepted(dE, beta):
     '''Determine whether a positive energy change is accepted'''
     return randfloat() < np.exp(-beta * dE)
