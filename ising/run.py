@@ -1,16 +1,12 @@
 import multiprocessing as mp
 
-import numpy as np
-
-from .simulation import make_simulation
+from .simulation import make_simulation, ensemble_av
 
 
 def worker(input, output, N, n_evolve, n_average):
     sim = make_simulation(N)
     for t in iter(input.get, 'STOP'):
-        r1 = np.random.randint(0, N, size=(n_evolve + n_average, 2))
-        r2 = np.random.rand(n_evolve + n_average)
-        (M, U) = sim.ensemble_av(1 / t, n_evolve, n_average, r1, r2)
+        (M, U) = ensemble_av(sim, 1 / t, n_evolve, n_average)
         output.put((t, M, U))
 
 

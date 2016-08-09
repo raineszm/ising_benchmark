@@ -28,37 +28,54 @@ class Simulation(object):
             self.magnetization -= 2 * spin
             self.energy += dE
 
-    def evolve(self, n, beta, random_sites, rand_accept):
+    def evolve(self, n, beta, random_sites, random_accept):
         for i in range(n):
-            self.metropolis_step(beta,
-                                 random_sites[i, 0],
-                                 random_sites[i, 1],
-                                 rand_accept[i])
+            self.metropolis_step(beta, random_sites[i, 0], random_sites[i, 1],
+                                 random_accept[i])
 
-    def time_average(self, n, beta, random_sites, rand_accept):
+    def time_average(self, n, beta, random_sites, random_accept):
         '''Calculates the thermal average of the magnetization and energy.'''
         mag = 0
         en = 0
 
         for i in range(n):
-            self.metropolis_step(beta,
-                                 random_sites[i, 0],
-                                 random_sites[i, 1],
-                                 rand_accept[i])
+            self.metropolis_step(beta, random_sites[i, 0], random_sites[i, 1],
+                                 random_accept[i])
             mag += self.magnetization
             en += self.energy
 
         return mag / float(n), en / float(n)
 
-    def ensemble_av(self, beta, n_evolve, n_average, r1, r2):
+    def ensemble_av(self, beta, n_evolve, n_average, random_sites,
+                    random_accept):
         # Lets the system equilibrate for a while
-        self.evolve(n_evolve, beta, r1[:n_evolve], r2[:n_evolve])
+        self.evolve(n_evolve, beta, random_sites[:n_evolve],
+                    random_accept[:n_evolve])
 
         # Now take thermal averages
-        return self.time_average(n_average, beta, r1[n_evolve:], r2[n_evolve:])
+        return self.time_average(n_average, beta, random_sites[n_evolve:],
+                                 random_accept[n_evolve:])
 
 
 @jit
 def make_simulation(N):
     l = make_lattice(N)
     return Simulation(N, l)
+
+
+@jit
+def ensemble_av(sim, beta, n_evolve, n_average):
+    random_sites = precompute_randint(sim.N, n_evolve + n_average)
+    random_accept = precompute_random(n_evolve + n_average)
+    return sim.ensemble_av(beta, n_evolve, n_average, random_sites,
+                           random_accept)
+
+
+@jit
+def precompute_randint(N, n):
+    return np.random.randint(0, N, size=(n, 2))
+
+
+@jit
+def precompute_random(n):
+    return np.random.rand(n)
