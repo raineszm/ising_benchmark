@@ -1,5 +1,5 @@
 import numpy as np
-from numba import jitclass, int64, jit
+from numba import jitclass, int64, njit, jit
 
 from .lattice import Lattice, make_lattice
 
@@ -17,65 +17,63 @@ class Simulation(object):
         self.energy = self.lattice.energy
         self.magnetization = self.lattice.magnetization
 
-    def metropolis_step(self, beta, i, j, r):
-        # i = randint(self.N)
-        # j = randint(self.N)
+    def metropolis_step(self, beta):
+        i = randint(self.N)
+        j = randint(self.N)
 
         dE = self.lattice.delta_E(i, j)
-        if dE < 0 or (r < np.exp(-beta * dE)):
+        if dE < 0 or accepted(dE, beta):
             spin = self.lattice.s[i, j]
             self.lattice.s[i, j] = -spin
             self.magnetization -= 2 * spin
             self.energy += dE
 
-    def evolve(self, n, beta, random_sites, random_accept):
+    def evolve(self, n, beta):
         for i in range(n):
-            self.metropolis_step(beta, random_sites[i, 0], random_sites[i, 1],
-                                 random_accept[i])
+            self.metropolis_step(beta)
 
-    def time_average(self, n, beta, random_sites, random_accept):
+    def time_average(self, n, beta):
         '''Calculates the thermal average of the magnetization and energy.'''
         mag = 0
         en = 0
 
         for i in range(n):
-            self.metropolis_step(beta, random_sites[i, 0], random_sites[i, 1],
-                                 random_accept[i])
+            self.metropolis_step(beta)
             mag += self.magnetization
             en += self.energy
 
         return mag / float(n), en / float(n)
 
-    def ensemble_av(self, beta, n_evolve, n_average, random_sites,
-                    random_accept):
+    def ensemble_av(self, beta, n_evolve, n_average):
         # Lets the system equilibrate for a while
-        self.evolve(n_evolve, beta, random_sites[:n_evolve],
-                    random_accept[:n_evolve])
+        self.evolve(n_evolve, beta)
 
         # Now take thermal averages
-        return self.time_average(n_average, beta, random_sites[n_evolve:],
-                                 random_accept[n_evolve:])
+        return self.time_average(n_average, beta)
 
 
 @jit
 def make_simulation(N):
-    l = make_lattice(N)
-    return Simulation(N, l)
+    lat = make_lattice(N)
+    return Simulation(N, lat)
 
 
-@jit
+@njit
 def ensemble_av(sim, beta, n_evolve, n_average):
-    random_sites = precompute_randint(sim.N, n_evolve + n_average)
-    random_accept = precompute_random(n_evolve + n_average)
-    return sim.ensemble_av(beta, n_evolve, n_average, random_sites,
-                           random_accept)
+    return sim.ensemble_av(beta, n_evolve, n_average)
 
 
-@jit
-def precompute_randint(N, n):
-    return np.random.randint(0, N, size=(n, 2))
+@njit
+def randint(n):
+    return np.random.randint(0, n)
 
 
-@jit
-def precompute_random(n):
-    return np.random.rand(n)
+@njit
+def randfloat():
+    return np.random.random()
+
+
+@njit
+def accepted(dE, beta):
+    '''Determine whether a positive energy change is accepted'''
+    return randfloat() < np.exp(-beta * dE)
