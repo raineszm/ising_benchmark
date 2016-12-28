@@ -1,3 +1,9 @@
+"""
+.. module:: lattice
+
+.. moduleauthor:: Zachary Raines
+
+"""
 from numba import jit, jitclass, int64
 import numpy as np
 
@@ -8,7 +14,16 @@ lattice_fields = [
 
 @jitclass(lattice_fields)
 class Lattice(object):
+    '''Represents the Lattice.
+    '''
+
     def __init__(self, N, nn1, nn2):
+        '''
+        :param N: Lattice size
+        :type N: int
+        :param nn1: Array of nearest neighbor indices
+        :param nn2: Array of nearest neighbor indices
+        '''
         self.N = N
         self.s = np.ones((N, N), np.int64)
         self.nn1 = nn1
@@ -37,6 +52,13 @@ class Lattice(object):
 
 @jit(Lattice.class_type.instance_type(int64))
 def make_lattice(N):
+    '''
+    Creates a new lattice.
+
+    :param N: The size of the lattice.
+    :type N: int
+    :returns: :class:`Lattice`
+    '''
     r = np.arange(N)
     nn1 = np.roll(r, 1)
     nn2 = np.roll(r, -1)
