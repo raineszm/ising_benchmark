@@ -4,7 +4,7 @@
 .. moduleauthor:: Zachary Raines
 
 """
-from numba import jit, jitclass, int64
+from numba import njit, jitclass, int64, jit
 import numpy as np
 
 lattice_fields = [
@@ -50,7 +50,7 @@ class Lattice(object):
         return total
 
 
-@jit(Lattice.class_type.instance_type(int64))
+@jit
 def make_lattice(N):
     '''
     Creates a new lattice.
