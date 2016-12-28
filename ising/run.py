@@ -3,11 +3,13 @@ import multiprocessing as mp
 from .simulation import make_simulation, ensemble_av
 
 
-def worker(input, output, N, n_evolve, n_average):
+def worker(in_, out_, N, n_evolve, n_average):
     sim = make_simulation(N)
-    for t in iter(input.get, 'STOP'):
+    for t in iter(in_.get, 'STOP'):
         (M, U) = ensemble_av(sim, 1 / t, n_evolve, n_average)
-        output.put((t, M, U))
+        if abs(t % 0.1) < 0.01:
+            print('T={}'.format(t))
+        out_.put((t, M, U))
 
 
 def psimulate(fname, ts, N, n_evolve=1000, n_average=1000):
