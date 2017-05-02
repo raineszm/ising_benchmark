@@ -105,6 +105,7 @@ pub fn ensemble_average(sys: &mut System,
     time_average(sys, n_average, beta)
 }
 
+/// Fetch the next temperature to be calculated
 fn next_t<T>(ts: &Arc<Mutex<VecDeque<T>>>)
     -> Option<T> {
         ts.lock().unwrap().pop_front()
@@ -126,6 +127,11 @@ fn main() {
         .map(|i| T0 + (i as f64)*dt)
         .collect::<VecDeque<_>>();
 
+    // Don't be intimidated
+    // An Arc just allows us to safely share a
+    // pointer between threads.
+    // We then have a mutex inside so we can be sure
+    // only one thread is accessing the deque at once.
     let ts = Arc::new(Mutex::new(ts));
 
     let handles = (0..NUM_THREADS).map(|_| {
