@@ -10,6 +10,7 @@ use std::io::Write;
 use std::collections::VecDeque;
 
 use std::sync::{Arc, Mutex};
+use std::sync::mpsc::channel;
 use std::thread;
 
 /// Number of threads to parallelize computation over.
@@ -134,14 +135,15 @@ fn main() {
     // only one thread is accessing the deque at once.
     let ts = Arc::new(Mutex::new(ts));
 
-    let handles = (0..NUM_THREADS).map(|_| {
+    let (data_s, data_r) = channel();
+
+    for _ in 0..NUM_THREADS{
 
         let ts = ts.clone();
+        let data_s = data_s.clone();
 
         thread::spawn(move || {
             let mut sys = System::new(N as usize);
-            let mut data
-                = Vec::with_capacity(STEPS/NUM_THREADS);
 
             while let Some(t) = next_t(&ts) {
                 if t % 0.1 < 0.01 {
@@ -150,14 +152,11 @@ fn main() {
                 let (U, M) =
                     ensemble_average(&mut sys, 1./t, 1000*N*N, 100*N*N);
 
-                data.push((t, M, U));
+                data_s.send((t, M, U)).unwrap();
             }
 
-            data
-        })
-    }).collect::<Vec<_>>();
-
-
+        });
+    }
 
     let mut f = File::create("met.dat")
         .ok()
@@ -165,18 +164,12 @@ fn main() {
 
     writeln!(&mut f, "T,M,U").unwrap();
 
-    for h in handles {
+    for _ in 0..STEPS {
+        let (t, M, U) = data_r.recv().unwrap();
 
-        let thread_data = h.join().unwrap();
-
-        for point in thread_data {
-
-            let (t, M, U) = point;
-
-            writeln!(f, "{}, {}, {}", t, M, U)
-                .ok()
-                .expect("Unable to write to file.");
-        }
+        writeln!(f, "{}, {}, {}", t, M, U)
+            .ok()
+            .expect("Unable to write to file.");
     }
 
 }
