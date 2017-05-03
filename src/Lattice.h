@@ -65,6 +65,11 @@ class Lattice {
             return nnminus_[k];
         }
 
+        inline int deltaE(int i, int j) const {
+            return 2*at(i, j)*sum_neighbors(i, j);
+        }
+
+
         std::minstd_rand rng;
 
 

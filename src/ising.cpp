@@ -21,11 +21,6 @@ const int N = 64;
 const int STEPS = 400;
 const int NUM_THREADS = static_cast<int>(std::thread::hardware_concurrency());
 
-template <int N>
-inline int deltaE(const Lattice<N>& lat, int i, int j) {
-    return 2*lat.at(i, j)*lat.sum_neighbors(i, j);
-}
-
 inline double rand_double(std::minstd_rand& rng) {
     return std::generate_canonical<double, 8>(rng);
 }
@@ -39,7 +34,7 @@ void metropolis_step(
     int i = lat.random_site();
     int j = lat.random_site();
 
-    dE = deltaE(lat, i, j);
+    dE = lat.deltaE(i, j);
 
     if (dE < 0 || (rand_double(lat.rng) < std::exp(-beta*dE))) {
         dM = -2*lat.flip(i, j);
