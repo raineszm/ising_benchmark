@@ -2,4 +2,6 @@ project('ising_cpp', 'cpp', 'c',
         default_options : ['cpp_std=c++11',
         'buildtype=release'])
 threaddep = dependency('threads')
-executable('ising', 'src/ising.cpp', dependencies : threaddep)
+cc = meson.get_compiler('c')
+m_dep = cc.find_library('m', required : false)
+executable('ising', 'src/ising.cpp', dependencies : [m_dep, threaddep])
