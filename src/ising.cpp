@@ -15,8 +15,11 @@
 
 #include "Lattice.h"
 
+const double T0 = 0.1;
+const double TF = 5.;
 const int N = 64;
-const int NUM_THREADS = 4;
+const int STEPS = 400;
+const int NUM_THREADS = static_cast<int>(std::thread::hardware_concurrency());
 
 template <int N>
 inline int deltaE(const Lattice<N>& lat, int i, int j) {
@@ -155,9 +158,9 @@ int main(int, char**) {
     data_vector data;
 
     //Build vector of temperatures
-    double dt = (5 - 0.1)/400;
-    double t = 0.1;
-    for (int i = 0; i < 400; i ++) {
+    double dt = (TF - T0)/(STEPS - 1);
+    double t = T0;
+    for (auto i = 0; i < STEPS; i++) {
         ts.push(t);
         t += dt;
     }
