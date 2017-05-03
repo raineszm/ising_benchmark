@@ -1,4 +1,5 @@
 extern crate rand;
+extern crate num_cpus;
 
 pub mod system;
 use system::System;
@@ -12,9 +13,6 @@ use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc::channel;
 use std::thread;
-
-/// Number of threads to parallelize computation over.
-pub const NUM_THREADS: usize = 4;
 
 /// Linear dimension of the Lattice.
 pub const N: i32 = 64;
@@ -114,6 +112,10 @@ fn next_t<T>(ts: &Arc<Mutex<VecDeque<T>>>)
 
 #[allow(non_snake_case)]
 fn main() {
+
+    /// Number of threads to parallelize computation over.
+    let NUM_THREADS: usize = num_cpus::get();
+
 
     // Note the -1. This ensures that we actually reach TF
     let dt = (TF - T0)/(STEPS as f64 - 1.);
