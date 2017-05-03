@@ -12,12 +12,9 @@ class Lattice {
 
         Lattice() : rng(std::chrono::system_clock::now().time_since_epoch().count()) {
             sites.fill(1);
-            nnplus_[N-1] = 0;
-            nnminus_[0] = N - 1;
-
-            for(auto i = 0; i < N - 1; i++) {
-                nnplus_[i] = i + 1;
-                nnminus_[N - i] = N - i - 1;
+            for(auto i = 0; i < N; i++) {
+                nnplus_[i] = (i + 1) % N;
+                nnminus_[i] = (i + N - 1) % N;
             }
 
         }
