@@ -12,9 +12,7 @@
 #include <iostream>
 
 #include <random>
-#include <pthread.h>
 
-#include "ising.h"
 #include "Lattice.h"
 
 const int N = 64;
@@ -25,10 +23,8 @@ inline int deltaE(const Lattice<N>& lat, int i, int j) {
     return 2*lat.at(i, j)*lat.sum_neighbors(i, j);
 }
 
-inline double rand_double() {
-    std::minstd_rand *rng =
-        static_cast<std::minstd_rand*>(pthread_getspecific(rng_key));
-    return std::generate_canonical<double, 8>(*rng);
+inline double rand_double(std::minstd_rand& rng) {
+    return std::generate_canonical<double, 8>(rng);
 }
 
 template <int N>
@@ -42,7 +38,7 @@ void metropolis_step(
 
     dE = deltaE(lat, i, j);
 
-    if (dE < 0 || (rand_double() < std::exp(-beta*dE))) {
+    if (dE < 0 || (rand_double(lat.rng) < std::exp(-beta*dE))) {
         dM = -2*lat.flip(i, j);
     } else {
         dE = 0;
@@ -119,9 +115,6 @@ using data_vector = std::vector<std::tuple<double, double, double>>;
 
 data_vector metropolis_subset(std::queue<double>& ts, std::mutex& mtx) {
         Lattice<N> lat;
-        std::random_device rd;
-        std::minstd_rand rng(rd());
-        pthread_setspecific(rng_key, &rng);
 
         double en, mag, t;
         data_vector local_data;
@@ -157,8 +150,6 @@ data_vector metropolis_subset(std::queue<double>& ts, std::mutex& mtx) {
 int main(int, char**) {
 
     Lattice<N> lat;
-    std::random_device rd;
-    pthread_key_create(&rng_key, NULL);
 
     std::queue<double> ts;
     data_vector data;
@@ -186,8 +177,6 @@ int main(int, char**) {
         data_vector local_data = futures[i].get();
         std::move(local_data.begin(), local_data.end(), std::back_inserter(data));
     }
-
-    pthread_key_delete(rng_key);
 
     std::ofstream data_file("met.dat");
 

@@ -2,16 +2,15 @@
 #include <cstdlib>
 #include <array>
 #include <algorithm>
+#include <chrono>
 #include <random>
-
-#include "ising.h"
 
 template <int N>
 class Lattice {
 
     public:
 
-        Lattice() {
+        Lattice() : rng(std::chrono::system_clock::now().time_since_epoch().count()) {
             sites.fill(1);
             nnplus_[N-1] = 0;
             nnminus_[0] = N - 1;
@@ -20,6 +19,7 @@ class Lattice {
                 nnplus_[i] = i + 1;
                 nnminus_[N - i] = N - i - 1;
             }
+
         }
 
         int at(int i, int j) const {
@@ -52,10 +52,8 @@ class Lattice {
 
         int get_N() const { return N; }
 
-        inline int random_site() const {
-        std::minstd_rand *rng =
-            static_cast<std::minstd_rand*>(pthread_getspecific(rng_key));
-            return (*rng)()/(rng->max()/N + 1);
+        inline int random_site() {
+            return rng()/(rng.max()/N + 1);
         }
 
         int magnetization() const {
@@ -69,6 +67,8 @@ class Lattice {
         int nnminus(int k) const {
             return nnminus_[k];
         }
+
+        std::minstd_rand rng;
 
 
     protected:
