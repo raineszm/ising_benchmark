@@ -114,10 +114,11 @@ using data_vector = std::vector<std::tuple<double, double, double>>;
 data_vector metropolis_subset(std::queue<double>& ts, std::mutex& mtx) {
         Lattice<N> lat;
 
-        double en, mag, t;
         data_vector local_data;
 
         while(true) {
+            double en, mag, t;
+
             {
                 std::unique_lock<std::mutex> lck(mtx);
 
@@ -136,8 +137,6 @@ data_vector metropolis_subset(std::queue<double>& ts, std::mutex& mtx) {
             }
 
             ensemble_average(lat, 1./t, 1000*N*N, 100*N*N, en, mag);
-
-
 
             local_data.push_back(std::make_tuple(t, en, mag));
         }
