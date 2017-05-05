@@ -1,4 +1,5 @@
 #!/usr/bin/env julia
+push!(LOAD_PATH, ".")
 import Metropolis
 require("setup.jl")
 
@@ -13,9 +14,8 @@ toc()
 sort!(data)
 
 out = open("met.dat", "w")
-@printf(out, "#T\tM\tU")
+@printf(out, "#T\tM\tU\n")
 for (t, M, U) in data
     @printf(out, "%f\t%f\t%f\n", t, abs(M), U)
 end
 close(out)
-

@@ -1,7 +1,6 @@
 #!/usr/bin/env julia
 
 module Metropolis
-
     type Lattice
         N :: Int
         nn_plus :: Vector{Int}
@@ -16,7 +15,6 @@ module Metropolis
         spins = ones(Int, N, N)
         Lattice(N, nn_plus, nn_minus, spins)
     end
-
 
     const lattice = Lattice(64)
 
