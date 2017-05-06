@@ -10,8 +10,8 @@ module Metropolis
 
     function Lattice(N :: Int)
         r = 1:N
-        nn_plus = [r[end], r[1:(end-1)]]
-        nn_minus = [r[2:end], r[1]]
+        nn_plus = [r[end], r[1:(end-1)]...]
+        nn_minus = [r[2:end]..., r[1]]
         spins = ones(Int, N, N)
         Lattice(N, nn_plus, nn_minus, spins)
     end
@@ -80,7 +80,7 @@ module Metropolis
     end
 
     function ensemble_av(lattice, beta, n_evolve, n_average)
-        srand(ifloor(time()))
+        srand(floor(Int, time()))
 
         T = 1/beta
         #Update us on the simulation progress
@@ -91,6 +91,8 @@ module Metropolis
         evolve!(lattice, n_evolve, beta)
         time_average!(lattice, n_average, beta)
     end
+
+    include("Runner.jl")
 
 
 end
