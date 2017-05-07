@@ -1,12 +1,9 @@
 #include <cstddef>
 #include <cmath>
-#include <array>
 #include <tuple>
-#include <algorithm>
-#include <iterator>
 #include <queue>
 #include <mutex>
-#include <future>
+#include <thread>
 
 #include <fstream>
 #include <iostream>
@@ -14,6 +11,7 @@
 #include <random>
 
 #include "Lattice.h"
+#include "Channel.h"
 
 const double T0 = 0.1;
 const double TF = 5.;
@@ -109,12 +107,11 @@ void ensemble_average(
     time_average(lat, n_average, beta, en, mag);
 }
 
-using data_vector = std::vector<std::tuple<double, double, double>>;
+using data_type = std::tuple<double, double, double>;
 
-data_vector metropolis_subset(std::queue<double>& ts, std::mutex& mtx) {
+void metropolis_subset(std::queue<double>& ts, std::mutex& mtx,
+        Channel<data_type>& chan) {
         Lattice<N> lat;
-
-        data_vector local_data;
 
         while(true) {
             double en, mag, t;
@@ -138,10 +135,8 @@ data_vector metropolis_subset(std::queue<double>& ts, std::mutex& mtx) {
 
             ensemble_average(lat, 1./t, 1000*N*N, 100*N*N, en, mag);
 
-            local_data.push_back(std::make_tuple(t, en, mag));
+            chan.put(std::make_tuple(t, en, mag));
         }
-
-        return local_data;
 }
 
 int main(int, char**) {
@@ -149,7 +144,7 @@ int main(int, char**) {
     Lattice<N> lat;
 
     std::queue<double> ts;
-    data_vector data;
+    Channel<data_type> chan;
 
     //Build vector of temperatures
     double dt = (TF - T0)/(STEPS - 1);
@@ -159,20 +154,14 @@ int main(int, char**) {
         t += dt;
     }
 
-    std::vector<std::future<data_vector>> futures;
+    std::vector<std::thread> threads;
     std::mutex mtx;
 
     for (auto i = 0; i < NUM_THREADS; i++) {
-        futures.push_back(std::async(
-            std::launch::async,
-            [&ts, &mtx]() {
-                return metropolis_subset(ts, mtx);
+        threads.push_back(std::thread(
+            [&ts, &mtx, &chan]() {
+                return metropolis_subset(ts, mtx, chan);
             }));
-    }
-
-    for (auto i = 0; i < NUM_THREADS; i++) {
-        data_vector local_data = futures[i].get();
-        std::move(local_data.begin(), local_data.end(), std::back_inserter(data));
     }
 
     std::ofstream data_file("met.dat");
@@ -182,11 +171,15 @@ int main(int, char**) {
         return -1;
     } else {
         data_file << "T,M,U" << std::endl;
-        for(auto row : data) {
+        for (int i = 0; i < STEPS; i++) {
+            data_type row = chan.take();
             data_file << std::get<0>(row) << ", " <<
                 std::get<1>(row) << ", " << std::get<2>(row) << std::endl;
         }
     }
+
+    for (std::thread& t: threads)
+        t.join();
 
     return 0;
 }
