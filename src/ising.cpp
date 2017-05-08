@@ -41,12 +41,11 @@ void metropolis_step(
     int i = lat.random_site();
     int j = lat.random_site();
 
-    dE = 0;
-    dM = 0;
-
     std::queue<std::tuple<int, int>> neighbors;
+    dE = lat.deltaE(i, j);
     const int s = lat.flip(i, j);
-    const double flip_prob = 1 - std::exp(-2*beta);
+    dM = -2*s;
+    const double flip_prob = 1. - std::exp(-2.*beta);
 
     push_neighbors(lat, i, j, neighbors);
 
@@ -59,10 +58,10 @@ void metropolis_step(
 
         if (lat.at(i, j) == s && rand_double(lat.rng) < flip_prob) {
 
-            lat.flip(i, j);
-
             dM -= 2*s;
-            dE -= 2;
+            dE += lat.deltaE(i, j);
+
+            lat.flip(i, j);
 
             push_neighbors(lat, i, j, neighbors);
         }
