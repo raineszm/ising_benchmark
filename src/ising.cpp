@@ -120,7 +120,7 @@ void metropolis_subset(std::queue<double>& ts, std::mutex& mtx,
 
             ensemble_average(lat, 1./t, 1000*N*N, 100*N*N, en, mag);
 
-            chan.put(std::make_tuple(t, en, mag));
+            chan.put(std::make_tuple(t, mag, en));
         }
 }
 
