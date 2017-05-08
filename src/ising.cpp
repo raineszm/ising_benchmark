@@ -24,6 +24,15 @@ inline double rand_double(std::minstd_rand& rng) {
 }
 
 template <int N>
+void push_neighbors(const Lattice<N>& lat, int i, int j,
+        std::queue<std::tuple<int, int>>& queue) {
+   queue.push(std::make_tuple(i, lat.nnplus(j)));
+   queue.push(std::make_tuple(i, lat.nnminus(j)));
+   queue.push(std::make_tuple(lat.nnminus(i), j));
+   queue.push(std::make_tuple(lat.nnplus(i), j));
+}
+
+template <int N>
 void metropolis_step(
         Lattice<N>& lat,
         double beta,
@@ -32,13 +41,30 @@ void metropolis_step(
     int i = lat.random_site();
     int j = lat.random_site();
 
-    dE = lat.deltaE(i, j);
+    dE = 0;
+    dM = 0;
 
-    if (dE < 0 || (rand_double(lat.rng) < std::exp(-beta*dE))) {
-        dM = -2*lat.flip(i, j);
-    } else {
-        dE = 0;
-        dM = 0;
+    std::queue<std::tuple<int, int>> neighbors;
+    const int s = lat.flip(i, j);
+
+    push_neighbors(lat, i, j, neighbors);
+
+    while (!neighbors.empty()) {
+        std::tuple<int, int> site = neighbors.front();
+        neighbors.pop();
+
+        i = std::get<0>(site);
+        j = std::get<1>(site);
+
+        if (lat.at(i, j) != s || rand_double(lat.rng) >= std::exp(-2*beta))
+            continue;
+
+        lat.flip(i, j);
+
+        dM -= 2*s;
+        dE -= 2;
+
+        push_neighbors(lat, i, j, neighbors);
     }
 }
 
