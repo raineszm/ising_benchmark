@@ -57,6 +57,21 @@ class Lattice {
             return std::accumulate(sites.begin(), sites.end(), 0);
         }
 
+        int energy() const {
+            int total = 0;
+
+            for (auto i = 0; i < N; i++) {
+                for (auto j = 0; j < N; j++) {
+                    total -= at(i, j)*(
+                            at(nnplus(i), j) +
+                            at(i, nnminus(j)));
+                }
+            }
+
+            return total;
+        }
+
+
         int nnplus(int k) const {
             return nnplus_[k];
         }

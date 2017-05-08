@@ -81,28 +81,13 @@ void evolve(
 }
 
 template <int N>
-int evaluate_energy(const Lattice<N>& lat) {
-    int total = 0;
-
-    for (auto i = 0; i < N; i++) {
-        for (auto j = 0; j < N; j++) {
-            total -= lat.at(i,j)*(
-                    lat.at(lat.nnplus(i), j) +
-                    lat.at(i, lat.nnminus(j)));
-        }
-    }
-
-    return total;
-}
-
-template <int N>
 void time_average(
         Lattice<N>& lat,
         int n,
         double beta,
         double& en,
         double& mag) {
-    int U = evaluate_energy(lat);
+    int U = lat.energy();
     int M = lat.magnetization();
 
     long U_tot = 0;
