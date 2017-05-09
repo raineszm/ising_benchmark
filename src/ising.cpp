@@ -24,22 +24,21 @@ inline double rand_double(std::minstd_rand& rng) {
 }
 
 template <int N>
-void metropolis_step(
+auto metropolis_step(
         Lattice<N>& lat,
-        double beta,
-        int& dE,
-        int& dM) {
+        double beta) {
     int i = lat.random_site();
     int j = lat.random_site();
 
-    dE = lat.deltaE(i, j);
+    int dE = lat.deltaE(i, j);
 
     if (dE < 0 || (rand_double(lat.rng) < std::exp(-beta*dE))) {
-        dM = -2*lat.flip(i, j);
+        return std::make_tuple(dE,
+                -2*lat.flip(i, j));
     } else {
-        dE = 0;
-        dM = 0;
+        return std::make_tuple(0, 0);
     }
+
 }
 
 template <int N>
@@ -47,10 +46,9 @@ void evolve(
         Lattice<N>& lat,
         int n,
         double beta) {
-    int dE, dM;
 
     for (auto i = 0; i < n; i++) {
-        metropolis_step(lat, beta, dE, dM);
+        metropolis_step(lat, beta);
     }
 }
 
@@ -72,7 +70,7 @@ auto time_average(
     int dE, dM;
 
     for (auto i = 0; i < n; i++) {
-        metropolis_step(lat, beta, dE, dM);
+        std::tie(dE, dM) = metropolis_step(lat, beta);
         U += dE;
         M += dM;
         U_tot += U;
