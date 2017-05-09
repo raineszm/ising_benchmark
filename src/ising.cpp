@@ -80,18 +80,22 @@ void evolve(
     }
 }
 
+inline
+double average(long agg, int n) {
+    return static_cast<double>(agg) / n;
+}
+
 template <int N>
-void time_average(
+std::tuple<double, double> time_average(
         Lattice<N>& lat,
         int n,
-        double beta,
-        double& en,
-        double& mag) {
+        double beta) {
     int U = lat.energy();
     int M = lat.magnetization();
 
     long U_tot = 0;
     long M_tot = 0;
+    long chi_tot = 0;
     int dE, dM;
 
     for (auto i = 0; i < n; i++) {
@@ -100,22 +104,21 @@ void time_average(
         M += dM;
         U_tot += U;
         M_tot += M;
+        chi_tot += M*M;
     }
 
-    en = static_cast<double>(U_tot)/static_cast<double>(n);
-    mag = static_cast<double>(M_tot)/static_cast<double>(n);
+    return std::make_tuple(average(U_tot, n),
+            std::sqrt(average(chi_tot, n)));
 }
 
 template <int N>
-void ensemble_average(
+std::tuple<double, double> ensemble_average(
         Lattice<N>& lat,
         double beta,
         int n_evolve,
-        int n_average,
-        double& en,
-        double& mag) {
+        int n_average) {
     evolve(lat, n_evolve, beta);
-    time_average(lat, n_average, beta, en, mag);
+    return time_average(lat, n_average, beta);
 }
 
 using data_type = std::tuple<double, double, double>;
@@ -125,7 +128,7 @@ void metropolis_subset(std::queue<double>& ts, std::mutex& mtx,
         Lattice<N> lat;
 
         while(true) {
-            double en, mag, t;
+            double t;
 
             {
                 std::unique_lock<std::mutex> lck(mtx);
@@ -144,9 +147,9 @@ void metropolis_subset(std::queue<double>& ts, std::mutex& mtx,
 
             }
 
-            ensemble_average(lat, 1./t, 1000*N*N, 100*N*N, en, mag);
+            auto observables = ensemble_average(lat, 1./t, 100, 1000);
 
-            chan.put(std::make_tuple(t, mag, en));
+            chan.put(std::tuple_cat(std::make_tuple(t), observables));
         }
 }
 
@@ -181,7 +184,7 @@ int main(int, char**) {
         std::cerr << "Could not open data file" << std::endl;
         return -1;
     } else {
-        data_file << "T,M,U" << std::endl;
+        data_file << "T,U,M_rms" << std::endl;
         for (int i = 0; i < STEPS; i++) {
             data_type row = chan.take();
             data_file << std::get<0>(row) << ", " <<
