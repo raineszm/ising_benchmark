@@ -1,5 +1,5 @@
 project('ising_cpp', 'cpp', 'c',
-        default_options : ['cpp_std=c++11',
+        default_options : ['cpp_std=c++14',
         'buildtype=release'])
 threaddep = dependency('threads')
 cc = meson.get_compiler('c')

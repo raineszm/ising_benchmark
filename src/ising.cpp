@@ -33,18 +33,16 @@ void push_neighbors(const Lattice<N>& lat, int i, int j,
 }
 
 template <int N>
-void metropolis_step(
+auto metropolis_step(
         Lattice<N>& lat,
-        double beta,
-        int& dE,
-        int& dM) {
+        double beta) {
     int i = lat.random_site();
     int j = lat.random_site();
 
     std::queue<std::tuple<int, int>> neighbors;
-    dE = lat.deltaE(i, j);
+    int dE = lat.deltaE(i, j);
     const int s = lat.flip(i, j);
-    dM = -2*s;
+    int dM = -2*s;
     const double flip_prob = 1. - std::exp(-2.*beta);
 
     push_neighbors(lat, i, j, neighbors);
@@ -66,6 +64,9 @@ void metropolis_step(
             push_neighbors(lat, i, j, neighbors);
         }
     }
+
+    return std::make_tuple(dE, dM);
+
 }
 
 template <int N>
@@ -73,10 +74,9 @@ void evolve(
         Lattice<N>& lat,
         int n,
         double beta) {
-    int dE, dM;
 
     for (auto i = 0; i < n; i++) {
-        metropolis_step(lat, beta, dE, dM);
+        metropolis_step(lat, beta);
     }
 }
 
@@ -86,7 +86,7 @@ double average(long agg, int n) {
 }
 
 template <int N>
-std::tuple<double, double> time_average(
+auto time_average(
         Lattice<N>& lat,
         int n,
         double beta) {
@@ -99,7 +99,7 @@ std::tuple<double, double> time_average(
     int dE, dM;
 
     for (auto i = 0; i < n; i++) {
-        metropolis_step(lat, beta, dE, dM);
+        std::tie(dE, dM) = metropolis_step(lat, beta);
         U += dE;
         M += dM;
         U_tot += U;
@@ -112,7 +112,7 @@ std::tuple<double, double> time_average(
 }
 
 template <int N>
-std::tuple<double, double> ensemble_average(
+auto ensemble_average(
         Lattice<N>& lat,
         double beta,
         int n_evolve,
