@@ -24,6 +24,16 @@ pub const TF: f64 = 5.;
 /// Number of temperatures.
 pub const STEPS: usize = 400;
 
+fn push_neighbors(sys: &System,
+                  i: usize, j: usize,
+                  queue: &mut VecDeque<(usize, usize)>) {
+
+    queue.push_back((i, sys.nnplus(j)));
+    queue.push_back((i, sys.nnminus(j)));
+    queue.push_back((sys.nnplus(i), j));
+    queue.push_back((sys.nnminus(i), j));
+}
+
 #[allow(non_snake_case)]
 /// Perform one step of the Metropolis algorithm
 ///
@@ -37,13 +47,28 @@ pub fn metropolis_step(sys: &mut System,
     let i = sys.random_site();
     let j = sys.random_site();
 
-    let dE = sys.deltaE(i, j);
+    let mut neighbors: VecDeque<(usize, usize)> = VecDeque::new();
+    let mut dE = sys.deltaE(i, j);
+    let s = sys.flip(i, j);
+    let mut dM = -2*s;
+    let flip_prob = 1. - (-2.*beta).exp();
 
-    if dE < 0 || (sys.rng.next_f64() < (-beta*(dE as f64)).exp()) {
-        (dE, -2*sys.flip(i, j))
-    } else {
-        (0, 0)
+    push_neighbors(sys, i, j, &mut neighbors);
+
+    while let Some((i, j)) = neighbors.pop_front() {
+
+        if sys.at(i, j) == s && sys.rng.next_f64() < flip_prob {
+            dM -= 2*s;
+            dE += sys.deltaE(i, j);
+
+            sys.flip(i, j);
+
+            push_neighbors(sys, i, j, &mut neighbors);
+        }
+
     }
+
+    return (dE, dM);
 }
 
 /// Evolve the system for `n` steps.
@@ -80,11 +105,11 @@ pub fn time_average(sys: &mut System,
         M += dM;
 
         U_tot += U as i64;
-        M_tot += M as i64;
+        M_tot += (M*M) as i64;
     }
 
     let en = (U_tot as f64) / (n as f64);
-    let mag = (M_tot as f64) / (n as f64);
+    let mag = ((M_tot as f64) / (n as f64)).sqrt();
 
     (en, mag)
 }
@@ -152,7 +177,7 @@ fn main() {
                     println!("{}", t);
                 }
                 let (U, M) =
-                    ensemble_average(&mut sys, 1./t, 1000*N*N, 100*N*N);
+                    ensemble_average(&mut sys, 1./t, 100, 1000);
 
                 data_s.send((t, M, U)).unwrap();
             }

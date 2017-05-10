@@ -49,6 +49,14 @@ impl System {
         s
     }
 
+    pub fn nnplus(&self, i: usize) -> usize {
+        return self.nnplus[i];
+    }
+
+    pub fn nnminus(&self, i: usize) -> usize {
+        return self.nnminus[i];
+    }
+
     fn sum_neighbors(&self, i: usize, j:usize) -> i32 {
        self.at(i, self.nnplus[j])
             + self.at(i, self.nnminus[j])
