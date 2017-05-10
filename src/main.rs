@@ -68,7 +68,7 @@ pub fn metropolis_step(sys: &mut System,
 
     }
 
-    return (dE, dM);
+    (dE, dM)
 }
 
 /// Evolve the system for `n` steps.
@@ -186,7 +186,6 @@ fn main() {
     }
 
     let mut f = File::create("met.dat")
-        .ok()
         .expect("Unable to open data file.");
 
     writeln!(&mut f, "T,M,U").unwrap();

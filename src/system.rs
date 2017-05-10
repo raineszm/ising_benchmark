@@ -50,11 +50,11 @@ impl System {
     }
 
     pub fn nnplus(&self, i: usize) -> usize {
-        return self.nnplus[i];
+        self.nnplus[i]
     }
 
     pub fn nnminus(&self, i: usize) -> usize {
-        return self.nnminus[i];
+        self.nnminus[i]
     }
 
     fn sum_neighbors(&self, i: usize, j:usize) -> i32 {
