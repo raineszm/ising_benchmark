@@ -1,7 +1,6 @@
 #!/usr/bin/env julia
-push!(LOAD_PATH, "src")
-import Metropolis.Runner
+import Distributed: @everywhere
+@everywhere push!(LOAD_PATH, "src")
+@everywhere import Metropolis
 
-tic()
-Metropolis.Runner.main()
-toc()
+@time Metropolis.Runner.main()
