@@ -1,4 +1,4 @@
-from collections import OrderedDict
+from collections import OrderedDict, deque
 
 import numpy as np
 from numba import int64, jitclass, njit, typeof
@@ -43,12 +43,29 @@ class Simulation:
         i = randint(self.N)
         j = randint(self.N)
 
+        neighbors = deque()
+
+        flip_prob = 1 - np.exp(-2 * beta)
+
+        s = self.lattice.flip(i, j)
         dE = self.lattice.delta_E(i, j)
-        if dE < 0 or accepted(dE, beta):
-            spin = self.lattice.s[i, j]
-            self.lattice.s[i, j] = -spin
-            self.magnetization -= 2 * spin
-            self.energy += dE
+        dM = -2 * s
+
+        self.lattice.push_neighbors(i, j, neighbors)
+
+        while neighbors:
+            i, j = neighbors.popleft()
+
+            if self.lattice.s[i, j] == s and randfloat() < flip_prob:
+                dM -= 2 * s
+                dE += self.lattice.delta_E(i, j)
+
+                self.lattice.flip(i, j)
+
+                self.lattice.push_neighbors(i, j, neighbors)
+
+        self.magnetization += dM
+        self.energy += dE
 
     def evolve(self, n, beta):
         for i in range(n):
@@ -61,10 +78,10 @@ class Simulation:
 
         for i in range(n):
             self.metropolis_step(beta)
-            mag += self.magnetization
+            mag += self.magnetization ** 2
             en += self.energy
 
-        return mag / float(n), en / float(n)
+        return np.sqrt(mag / float(n)), en / float(n)
 
     def ensemble_av(self, beta, n_evolve, n_average):
         # Lets the system equilibrate for a while

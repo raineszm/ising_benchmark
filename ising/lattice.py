@@ -51,3 +51,14 @@ class Lattice:
                     self.s[self.nn1[i], j] + self.s[i, self.nn2[j]]
                 )
         return total
+
+    def flip(self, i, j):
+        spin = self.s[i, j]
+        self.s[i, j] = -spin
+        return spin
+
+    def push_neighbors(self, i, j, queue):
+        queue.append((i, self.nn1[j]))
+        queue.append((i, self.nn2[j]))
+        queue.append((self.nn1[i], i))
+        queue.append((self.nn2[i], i))
