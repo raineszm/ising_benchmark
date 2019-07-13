@@ -177,7 +177,7 @@ fn main() {
                     println!("{}", t);
                 }
                 let (U, M) =
-                    ensemble_average(&mut sys, 1./t, 100, 1000);
+                    ensemble_average(&mut sys, 1./t, 1000, 100);
 
                 data_s.send((t, M, U)).unwrap();
             }
