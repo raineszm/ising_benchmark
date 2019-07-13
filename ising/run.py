@@ -1,14 +1,15 @@
 import multiprocessing as mp
 
-from .simulation import make_simulation, ensemble_av
+from .lattice import make_lattice
+from .simulation import Simulation, ensemble_av
 
 
 def worker(in_, out_, N, n_evolve, n_average):
-    sim = make_simulation(N)
-    for t in iter(in_.get, 'STOP'):
+    sim = Simulation(N)
+    for t in iter(in_.get, "STOP"):
         (M, U) = ensemble_av(sim, 1 / t, n_evolve, n_average)
         if abs(t % 0.1) < 0.01:
-            print('T={}'.format(t))
+            print("T={}".format(t))
         out_.put((t, M, U))
 
 
@@ -27,11 +28,11 @@ def psimulate(fname, ts, N, n_evolve=1000, n_average=1000):
         t_queue.put(t)
 
     for _ in threads:
-        t_queue.put('STOP')
+        t_queue.put("STOP")
 
-    with open(fname, 'w') as f:
+    with open(fname, "w") as f:
         for _ in range(len(ts)):
-            print('{},{},{}'.format(*out_queue.get()), file=f)
+            print("{},{},{}".format(*out_queue.get()), file=f)
 
     for t in threads:
         t.join()

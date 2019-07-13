@@ -4,62 +4,57 @@
 .. moduleauthor:: Zachary Raines
 
 """
-from numba import njit, jitclass, int64, jit
+from collections import namedtuple
+
 import numpy as np
+from numba import int64, jit, njit
 
-lattice_fields = [
-    ('N', int64), ('s', int64[:, :]), ('nn1', int64[:]), ('nn2', int64[:])
-]
-
-
-@jitclass(lattice_fields)
-class Lattice(object):
-    '''Represents the Lattice.
-    '''
-
-    def __init__(self, N, nn1, nn2):
-        '''
-        :param N: Lattice size
-        :type N: int
-        :param nn1: Array of nearest neighbor indices
-        :param nn2: Array of nearest neighbor indices
-        '''
-        self.N = N
-        self.s = np.ones((N, N), np.int64)
-        self.nn1 = nn1
-        self.nn2 = nn2
-
-    def delta_E(self, i, j):
-        '''Calculate the energy change due to a spin flip'''
-        return 2 * self.s[i, j] * (
-            self.s[self.nn1[i], j] + self.s[i, self.nn1[j]] +
-            self.s[self.nn2[i], j] + self.s[i, self.nn2[j]])
-
-    @property
-    def magnetization(self):
-        return np.sum(self.s)
-
-    @property
-    def energy(self):
-        total = 0
-
-        for i in range(self.N):
-            for j in range(self.N):
-                total -= self.s[i, j] * (
-                    self.s[self.nn1[i], j] + self.s[i, self.nn2[j]])
-        return total
+Lattice = namedtuple("Lattice", ["N", "s", "nn1", "nn2"])
 
 
-@jit
+@njit
 def make_lattice(N):
-    '''
+    """
     Creates a new lattice.
 
     :param N: The size of the lattice.
     :type N: int
+    :param nn1: Array of nearest neighbor indices
+    :param nn2: Array of nearest neighbor indices
     :returns: :class:`Lattice`
-    '''
+    """
     r = np.arange(N)
+    s = np.ones((N, N), np.int_)
     nn1 = np.roll(r, 1)
     nn2 = np.roll(r, -1)
-    return Lattice(N, nn1, nn2)
+    return Lattice(N, s, nn1, nn2)
+
+
+@njit
+def delta_E(lat, i, j):
+    """Calculate the energy change due to a spin flip"""
+    return (
+        2
+        * lat.s[i, j]
+        * (
+            lat.s[lat.nn1[i], j]
+            + lat.s[i, lat.nn1[j]]
+            + lat.s[lat.nn2[i], j]
+            + lat.s[i, lat.nn2[j]]
+        )
+    )
+
+
+@njit
+def magnetization(lat):
+    return np.sum(lat.s)
+
+
+@njit
+def energy(lat):
+    total = 0
+
+    for i in range(lat.N):
+        for j in range(lat.N):
+            total -= lat.s[i, j] * (lat.s[lat.nn1[i], j] + lat.s[i, lat.nn2[j]])
+    return total
