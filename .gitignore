@@ -1,0 +1,7 @@
+*.c
+*.html
+*.so
+build/*
+*.png
+*.npz
+*.prof

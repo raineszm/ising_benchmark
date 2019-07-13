@@ -25,6 +25,9 @@ cdef int N = 50
 #Spins are 1 or -1
 cdef np.ndarray spins = np.ones((N,N), dtype=DTYPE)
 
+def pspins():
+    return spins
+
 #Thermodynamic variables
 cdef DTYPE_t energy = 0
 cdef DTYPE_t magnetization = 0
@@ -52,16 +55,16 @@ cdef inline float randfloat():
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef inline DTYPE_t delta_E(DTYPE_t [:,::1] s, unsigned int i, unsigned int j):    
+cdef inline DTYPE_t delta_E(DTYPE_t [:,::1] s, unsigned int i, unsigned int j):
     '''Calculate the energy change due to a spin flip'''
-    return 2*s[i,j]*(s[<unsigned int>nn1v[i],j] 
+    return 2*s[i,j]*(s[<unsigned int>nn1v[i],j]
                        + s[i,<unsigned int>nn1v[j]]
                        + s[<unsigned int>nn2v[i],j]
                        + s[i, <unsigned int>nn2v[j]])
-    
+
 cdef inline bint accepted(DTYPE_t dE, float beta):
     '''Determine whether a positive energy change is accepted'''
-    return randfloat() < exp(-beta*dE) 
+    return randfloat() < exp(-beta*dE)
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
