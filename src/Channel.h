@@ -1,38 +1,41 @@
 #pragma once
 
-#include <queue>
-#include <mutex>
 #include <condition_variable>
+#include <mutex>
+#include <queue>
 
-template <class T>
-class Channel {
-    private:
-        std::mutex mtx;
-        std::condition_variable cv;
-        std::queue<T> queue;
+template<class T>
+class Channel
+{
+private:
+  std::mutex mtx;
+  std::condition_variable cv;
+  std::queue<T> queue;
 
-        T _take() {
-            T item = queue.front();
-            queue.pop();
-            return item;
-        }
+  T _take()
+  {
+    T item = queue.front();
+    queue.pop();
+    return item;
+  }
 
-    public:
+public:
+  void put(const T& item)
+  {
+    {
+      std::lock_guard<std::mutex> lock(mtx);
+      queue.push(item);
+    }
+    cv.notify_one();
+  }
 
-        void put(const T& item) {
-            {
-                std::lock_guard<std::mutex> lock(mtx);
-                queue.push(item);
-            }
-            cv.notify_one();
-        }
+  T take()
+  {
+    std::unique_lock<std::mutex> lock(mtx);
 
-        T take() {
-            std::unique_lock<std::mutex> lock(mtx);
+    if (queue.empty())
+      cv.wait(lock, [this]() { return !queue.empty(); });
 
-            if (queue.empty())
-                cv.wait(lock, [this]() { return !queue.empty(); });
-
-            return _take();
-        }
+    return _take();
+  }
 };
