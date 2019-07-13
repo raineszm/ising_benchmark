@@ -1,6 +1,5 @@
 import multiprocessing as mp
 
-from .lattice import make_lattice
 from .simulation import Simulation, ensemble_av
 
 

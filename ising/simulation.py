@@ -3,14 +3,14 @@ from collections import OrderedDict
 import numpy as np
 from numba import int64, jitclass, njit, typeof
 
-from .lattice import delta_E, energy, magnetization, make_lattice
+from .lattice import Lattice
 
 
 @jitclass(
     OrderedDict(
         {
             "N": int64,
-            "lattice": typeof(make_lattice(1)),
+            "lattice": typeof(Lattice(1)),
             "energy": int64,
             "magnetization": int64,
         }
@@ -19,9 +19,9 @@ from .lattice import delta_E, energy, magnetization, make_lattice
 class Simulation:
     def __init__(self, N):
         self.N = N
-        self.lattice = make_lattice(N)
-        self.energy = energy(self.lattice)
-        self.magnetization = magnetization(self.lattice)
+        self.lattice = Lattice(N)
+        self.energy = self.lattice.energy()
+        self.magnetization = self.lattice.magnetization()
 
 
 @njit
@@ -29,7 +29,7 @@ def metropolis_step(sim, beta):
     i = randint(sim.N)
     j = randint(sim.N)
 
-    dE = delta_E(sim.lattice, i, j)
+    dE = sim.lattice.delta_E(i, j)
     if dE < 0 or accepted(dE, beta):
         spin = sim.lattice.s[i, j]
         sim.lattice.s[i, j] = -spin
