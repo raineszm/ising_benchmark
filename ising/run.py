@@ -1,12 +1,12 @@
 import multiprocessing as mp
 
-from .simulation import Simulation, ensemble_av
+from .simulation import Simulation
 
 
 def worker(in_, out_, N, n_evolve, n_average):
     sim = Simulation(N)
     for t in iter(in_.get, "STOP"):
-        (M, U) = ensemble_av(sim, 1 / t, n_evolve, n_average)
+        (M, U) = sim.ensemble_av(1 / t, n_evolve, n_average)
         if abs(t % 0.1) < 0.01:
             print("T={}".format(t))
         out_.put((t, M, U))
