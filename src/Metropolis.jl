@@ -1,6 +1,8 @@
 #!/usr/bin/env julia
 
 module Metropolis
+using DataStructures: Deque
+
 mutable struct Lattice
     N :: Int
     nn_plus :: Vector{Int}
@@ -27,18 +29,50 @@ function delta_E(lattice :: Lattice,
                           +lattice.spins[i,lattice.nn_minus[j]])
 end
 
+function flip!(lattice :: Lattice, i:: Int, j:: Int)
+    @inbounds spin = lattice.spins[i,j]
+    @inbounds lattice.spins[i,j] = -spin
+    spin
+end
+
+function push_neighbors!(lattice :: Lattice, i :: Int, j :: Int, queue)
+    push!(queue, (i, lattice.nn_plus[i]))
+    push!(queue, (i, lattice.nn_minus[i]))
+    push!(queue, (lattice.nn_plus[j], j))
+    push!(queue, (lattice.nn_minus[j], j))
+end
+
+
 function metropolis_step!(lattice :: Lattice, beta :: Float64)
     i = crand(lattice.N)
     j = crand(lattice.N)
 
-    dE = delta_E(lattice, i, j)
+    neighbors = Deque{Tuple{Int, Int}}()
 
-    if dE < 0 || rand() < ccall(:exp, Cdouble, (Cdouble,), -beta*dE)
-        @inbounds spin = lattice.spins[i,j]
-        @inbounds lattice.spins[i,j] = -spin
-        return dE, -2spin
+    # Flip the picked spin
+    spin = flip!(lattice, i, j)
+
+    dE = delta_E(lattice, i, j)
+    dM = -2*spin
+
+    flip_prob = 1 - exp(-2*beta)
+
+    push_neighbors!(lattice, i, j, neighbors)
+
+    while !isempty(neighbors)
+        i, j = popfirst!(neighbors)
+        if lattice.spins[i, j] == spin && rand() < flip_prob
+            dM -= 2*spin
+            dE += delta_E(lattice, i, j)
+
+            flip!(lattice, i, j)
+
+            push_neighbors!(lattice, i, j, neighbors)
+
+        end
     end
-    0,0
+
+    dE, dM
 end
 
 function evolve!(lattice :: Lattice, n :: Int, beta :: Float64)
@@ -57,11 +91,11 @@ function time_average!(lattice :: Lattice, n :: Int, beta :: Float64)
         (dE, dM) = metropolis_step!(lattice, beta)
         U += dE
         M += dM
-        mag += M
+        mag += M * M
         en += U
     end
 
-    return mag/n, en/n
+    return sqrt(mag/n), en/n
 end
 
 function evaluate_energy(lattice :: Lattice)

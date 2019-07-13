@@ -24,7 +24,7 @@ function run_sim(N, c_in, c_out, LOCK)
         end
 
 
-        (M, U) = Metropolis.ensemble_av(lat, 1/t, 1000N^2, 100N^2)
+        (M, U) = Metropolis.ensemble_av(lat, 1/t, 1000, 100)
         put!(c_out, (t, M, U))
     end
 end
