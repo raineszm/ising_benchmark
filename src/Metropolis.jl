@@ -31,15 +31,15 @@ end
 
 function flip!(lattice :: Lattice, i:: Int, j:: Int)
     @inbounds spin = lattice.spins[i,j]
-    @inbounds lattice.spins[i,j] = -spin
+    @inbounds lattice.spins[i, j] = -spin
     spin
 end
 
 function push_neighbors!(lattice :: Lattice, i :: Int, j :: Int, queue)
-    push!(queue, (i, lattice.nn_plus[i]))
-    push!(queue, (i, lattice.nn_minus[i]))
-    push!(queue, (lattice.nn_plus[j], j))
-    push!(queue, (lattice.nn_minus[j], j))
+    push!(queue, (i, lattice.nn_plus[j]))
+    push!(queue, (i, lattice.nn_minus[j]))
+    push!(queue, (lattice.nn_plus[i], j))
+    push!(queue, (lattice.nn_minus[i], j))
 end
 
 
