@@ -58,7 +58,7 @@ class Lattice:
         return spin
 
     def push_neighbors(self, i, j, queue):
-        queue.append((i, self.nn1[j]))
-        queue.append((i, self.nn2[j]))
-        queue.append((self.nn1[i], i))
-        queue.append((self.nn2[i], i))
+        queue.push(i, self.nn1[j])
+        queue.push(i, self.nn2[j])
+        queue.push(self.nn1[i], i)
+        queue.push(self.nn2[i], i)

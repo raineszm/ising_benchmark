@@ -1,8 +1,9 @@
-from collections import OrderedDict, deque
+from collections import OrderedDict
 
 import numpy as np
 from numba import int64, jitclass, njit, typeof
 
+from .fifo import Fifo
 from .lattice import Lattice
 
 
@@ -29,6 +30,7 @@ def accepted(dE, beta):
             "lattice": typeof(Lattice(1)),
             "energy": int64,
             "magnetization": int64,
+            "neighbors": typeof(Fifo(1)),
         }
     )
 )
@@ -38,12 +40,11 @@ class Simulation:
         self.lattice = Lattice(N)
         self.energy = self.lattice.energy()
         self.magnetization = self.lattice.magnetization()
+        self.neighbors = Fifo(N ** 2)
 
     def metropolis_step(self, beta):
         i = randint(self.N)
         j = randint(self.N)
-
-        neighbors = deque()
 
         flip_prob = 1 - np.exp(-2 * beta)
 
@@ -51,10 +52,10 @@ class Simulation:
         dE = self.lattice.delta_E(i, j)
         dM = -2 * s
 
-        self.lattice.push_neighbors(i, j, neighbors)
+        self.lattice.push_neighbors(i, j, self.neighbors)
 
-        while neighbors:
-            i, j = neighbors.popleft()
+        while not self.neighbors.empty:
+            i, j = self.neighbors.pop()
 
             if self.lattice.s[i, j] == s and randfloat() < flip_prob:
                 dM -= 2 * s
@@ -62,7 +63,7 @@ class Simulation:
 
                 self.lattice.flip(i, j)
 
-                self.lattice.push_neighbors(i, j, neighbors)
+                self.lattice.push_neighbors(i, j, self.neighbors)
 
         self.magnetization += dM
         self.energy += dE
