@@ -1,1 +1,1 @@
-TIME_ACTION = "julia -p4 do_sim.jl"
+TIME_ACTION = "julia -p auto -O3 --check-bounds=no do_sim.jl"
