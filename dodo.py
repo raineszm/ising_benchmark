@@ -13,12 +13,16 @@ def load_benchmark(benchmark_path):
     return module
 
 
-BENCHMARKS = ["cpp", "rust"]
+BENCHMARKS = [
+    folder
+    for folder in Path(".").iterdir()
+    if folder.is_dir() and (folder / "benchmark.py").exists()
+]
 
 
 def task_build():
-    for benchmark in BENCHMARKS:
-        workdir = Path.cwd() / benchmark
+    for workdir in BENCHMARKS:
+        benchmark = workdir.name
         benchmark_file = load_benchmark(workdir)
         if not hasattr(benchmark_file, "BUILD_ACTIONS"):
             continue
@@ -32,25 +36,25 @@ def task_build():
 
 
 def wrap_run(cmd, poetry=False):
-    cmd = "hyperfine " + cmd
+    return 'hyperfine "{}"'.format(cmd)
     if poetry:
-        cmd = 'poetry run "{}"'.format(cmd)
+        cmd = "poetry run " + cmd
     return cmd
 
 
 def task_time():
-    for benchmark in BENCHMARKS:
-        workdir = Path.cwd() / benchmark
+    for workdir in BENCHMARKS:
+        benchmark = workdir.name
         benchmark_file = load_benchmark(workdir)
-        if not hasattr(benchmark_file, "TIME_ACTIONS"):
+        if not hasattr(benchmark_file, "TIME_ACTION"):
             continue
 
         poetry = hasattr(benchmark_file, "USE_POETRY") and benchmark_file.USE_POETRY
 
-        actions = benchmark_file.TIME_ACTIONS
+        action = benchmark_file.TIME_ACTION
 
         yield {
             "name": benchmark,
-            "actions": [CmdAction(wrap_run(a, poetry), cwd=workdir) for a in actions],
-            "task_dep": ["build:" + benchmark],
+            "actions": [CmdAction(wrap_run(action, poetry), cwd=workdir)],
+            "task_dep": ["build"],
         }

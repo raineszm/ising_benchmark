@@ -3,4 +3,4 @@ BUILD_ACTIONS = [
     "cmake --build _builds",
 ]
 
-TIME_ACTIONS = ["_builds/ising"]
+TIME_ACTION = "_builds/ising"
