@@ -1,8 +1,9 @@
 #!/usr/bin/env python
-import numpy as np
-
 import ising.run
 
 N = 64
-T = np.linspace(0.1, 5, 400)
+TMIN = 0.1
+TMAX = 5
+STEPS = 400
+T = [TMIN + i*(TMAX - TMIN)/STEPS for i in range(STEPS)]
 ising.run.psimulate("data.csv", T, N, 1000, 100)

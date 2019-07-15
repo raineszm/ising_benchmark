@@ -32,6 +32,7 @@ def psimulate(fname, ts, N, n_evolve=1000, n_average=1000):
     with open(fname, "w") as f:
         for _ in range(len(ts)):
             print("{},{},{}".format(*out_queue.get()), file=f)
+            f.flush()
 
     for t in threads:
         t.join()
