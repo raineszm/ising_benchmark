@@ -1,0 +1,8 @@
+[package]
+name = "ising_rust"
+version = "0.1.0"
+authors = ["Zach Raines <raineszm@gmail.com>"]
+
+[dependencies]
+rand = "*"
+num_cpus = "*"
