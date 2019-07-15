@@ -14,6 +14,8 @@ use std::sync::{Arc, Mutex};
 use std::sync::mpsc::channel;
 use std::thread;
 
+use std::env;
+
 /// Linear dimension of the Lattice.
 pub const N: i32 = 64;
 
@@ -185,7 +187,15 @@ fn main() {
         });
     }
 
-    let mut f = File::create("met.dat")
+    let args: Vec<String> = env::args().collect();
+
+    let mut fname = "data.csv";
+
+    if args.len() > 1 {
+        fname = &args[1];
+    }
+
+    let mut f = File::create(fname)
         .expect("Unable to open data file.");
 
     writeln!(&mut f, "T,M,U").unwrap();

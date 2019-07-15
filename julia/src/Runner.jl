@@ -29,7 +29,7 @@ function run_sim(N, c_in, c_out, LOCK)
     end
 end
 
-function main()
+function main(data_file)
     T = LinRange(T0, TF, STEPS)
     c_in = RemoteChannel(() -> Channel{Float64}(STEPS))
     c_out = RemoteChannel(() -> Channel{Tuple{Float64, Float64, Float64}}(STEPS))
@@ -46,7 +46,7 @@ function main()
         futures[i] =  @spawn run_sim(N, c_in, c_out, c_lock)
     end
 
-    open("met.dat", "w") do out
+    open(data_file, "w") do out
         @printf(out, "#T\tM\tU\n")
         flush(out)
 

@@ -3,6 +3,8 @@ from pathlib import Path
 
 from doit.action import CmdAction
 
+DATA_DIR = Path.cwd() / "outputs"
+
 
 def load_benchmark(benchmark_path):
     file_path = benchmark_path / "benchmark.py"
@@ -35,8 +37,8 @@ def task_build():
         }
 
 
-def wrap_run(cmd, poetry=False):
-    return 'hyperfine "{}"'.format(cmd)
+def wrap_run(cmd, data, poetry=False):
+    return 'hyperfine "{} {}"'.format(cmd, data)
     if poetry:
         cmd = "poetry run " + cmd
     return cmd
@@ -45,6 +47,7 @@ def wrap_run(cmd, poetry=False):
 def task_time():
     for workdir in BENCHMARKS:
         benchmark = workdir.name
+        data_file = (DATA_DIR / benchmark).with_suffix(".csv")
         benchmark_file = load_benchmark(workdir)
         if not hasattr(benchmark_file, "TIME_ACTION"):
             continue
@@ -55,6 +58,7 @@ def task_time():
 
         yield {
             "name": benchmark,
-            "actions": [CmdAction(wrap_run(action, poetry), cwd=workdir)],
+            "actions": [CmdAction(wrap_run(action, data_file, poetry), cwd=workdir)],
             "task_dep": ["build"],
+            "targets": [data_file],
         }

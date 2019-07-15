@@ -155,7 +155,7 @@ worker(std::queue<double>& ts, std::mutex& mtx, Channel<data_type>& chan)
 }
 
 int
-main(int, char**)
+main(int argc, char** argv)
 {
   Lattice<N> lat;
 
@@ -178,7 +178,12 @@ main(int, char**)
       std::thread([&ts, &mtx, &chan]() { worker(ts, mtx, chan); }));
   }
 
-  std::ofstream data_file("met.dat");
+  std::string file_path = "data.csv";
+  if (argc > 1) {
+    file_path = argv[1];
+
+  }
+  std::ofstream data_file(file_path);
 
   if (!data_file.is_open()) {
     std::cerr << "Could not open data file" << std::endl;
