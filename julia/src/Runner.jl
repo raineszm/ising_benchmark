@@ -57,6 +57,7 @@ function main()
         end
     end
     close(c_out)
+    close(c_lock)
 
     for f in futures
         wait(f)
