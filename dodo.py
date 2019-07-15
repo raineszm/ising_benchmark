@@ -13,7 +13,7 @@ def load_benchmark(benchmark_path):
     return module
 
 
-BENCHMARKS = ["cpp"]
+BENCHMARKS = ["cpp", "rust"]
 
 
 def task_build():
