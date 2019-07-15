@@ -50,8 +50,7 @@ class Simulation:
 
                 self.lattice.push_neighbors(i, j, neighbors)
 
-        self.magnetization += dM
-        self.energy += dE
+        return dE, dM
 
     def evolve(self, n, beta):
         for i in range(n):
@@ -61,6 +60,8 @@ class Simulation:
         """Calculates the thermal average of the magnetization and energy."""
         mag = 0
         en = 0
+        self.energy = self.lattice.energy()
+        self.magnetization = self.lattice.magnetization()
 
         for i in range(n):
             self.metropolis_step(beta)

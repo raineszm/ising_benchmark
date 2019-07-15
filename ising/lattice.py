@@ -4,6 +4,7 @@
 .. moduleauthor:: Zachary Raines
 
 """
+import array
 class Lattice:
     def __init__(self, N):
         """
@@ -15,7 +16,7 @@ class Lattice:
         """
         r = list(range(N))
         self.N = N
-        self.s = [1]*(N**2)
+        self.s = array.array('i', [1]*(N**2))
         self.nn1 = r[1:] + [r[0]]
         self.nn2 = [r[-1]] + r[:-1]
 
@@ -29,7 +30,7 @@ class Lattice:
         self.s[j + self.N*i] = value
 
     def delta_E(self, i, j):
-        """Calcuselfe the energy change due to a spin flip"""
+        """Calculate the energy change due to a spin flip"""
         return (
             2
             * self[i, j]
