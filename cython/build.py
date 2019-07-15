@@ -5,10 +5,7 @@ import numpy as np
 
 from Cython.Build import cythonize
 
-# use cythonize to build the extensions
-modules = ["ising/simulate.pyx"]
-
-extensions = cythonize(modules)
+extensions = cythonize("ising/*.pyx")
 
 
 def build(setup_kwargs):
