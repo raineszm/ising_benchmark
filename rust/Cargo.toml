@@ -4,5 +4,5 @@ version = "0.1.0"
 authors = ["Zach Raines <raineszm@gmail.com>"]
 
 [dependencies]
-rand = "*"
+rand = "^0.3"
 num_cpus = "*"
