@@ -4,6 +4,7 @@ from pathlib import Path
 from doit.action import CmdAction
 
 DATA_DIR = Path.cwd() / "outputs"
+RESULT_DIR = Path.cwd() / "results"
 
 
 def load_benchmark(benchmark_path):
@@ -37,8 +38,8 @@ def task_build():
         }
 
 
-def wrap_run(cmd, data, poetry=False):
-    return 'hyperfine "{} {}"'.format(cmd, data)
+def wrap_run(result, cmd, data, poetry=False):
+    return 'hyperfine -w1 -r3 --export-json {} "{} {}"'.format(result, cmd, data)
     if poetry:
         cmd = "poetry run " + cmd
     return cmd
@@ -48,6 +49,8 @@ def task_time():
     for workdir in BENCHMARKS:
         benchmark = workdir.name
         data_file = (DATA_DIR / benchmark).with_suffix(".csv")
+        result_file = (RESULT_DIR / benchmark).with_suffix(".json")
+
         benchmark_file = load_benchmark(workdir)
         if not hasattr(benchmark_file, "TIME_ACTION"):
             continue
@@ -58,7 +61,9 @@ def task_time():
 
         yield {
             "name": benchmark,
-            "actions": [CmdAction(wrap_run(action, data_file, poetry), cwd=workdir)],
+            "actions": [
+                CmdAction(wrap_run(result_file, action, data_file, poetry), cwd=workdir)
+            ],
             "task_dep": ["build"],
             "targets": [data_file],
         }
