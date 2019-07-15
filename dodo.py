@@ -29,3 +29,28 @@ def task_build():
             "name": benchmark,
             "actions": [CmdAction(a, cwd=workdir) for a in actions],
         }
+
+
+def wrap_run(cmd, poetry=False):
+    cmd = "hyperfine " + cmd
+    if poetry:
+        cmd = 'poetry run "{}"'.format(cmd)
+    return cmd
+
+
+def task_time():
+    for benchmark in BENCHMARKS:
+        workdir = Path.cwd() / benchmark
+        benchmark_file = load_benchmark(workdir)
+        if not hasattr(benchmark_file, "TIME_ACTIONS"):
+            continue
+
+        poetry = hasattr(benchmark_file, "USE_POETRY") and benchmark_file.USE_POETRY
+
+        actions = benchmark_file.TIME_ACTIONS
+
+        yield {
+            "name": benchmark,
+            "actions": [CmdAction(wrap_run(a, poetry), cwd=workdir) for a in actions],
+            "task_dep": ["build:" + benchmark],
+        }

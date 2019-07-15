@@ -1,3 +1,6 @@
-BUILD_ACTIONS = ["cmake -H. -B_builds", "cmake --build _builds"]
+BUILD_ACTIONS = [
+    "cmake -H. -B_builds -G 'Ninja' -DCMAKE_BUILD_TYPE=Release",
+    "cmake --build _builds",
+]
 
-TIME_ACTIONS = []
+TIME_ACTIONS = ["_builds/ising"]
