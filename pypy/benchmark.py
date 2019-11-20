@@ -1,2 +1,1 @@
-TIME_ACTION = "pypy3 run_sim.py"
-USE_POETRY = True
+TIME_ACTION = "pyenv exec python run_sim.py"

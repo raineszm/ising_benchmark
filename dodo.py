@@ -39,7 +39,7 @@ def task_build():
 
 
 def wrap_run(result, cmd, data, poetry=False):
-    return 'hyperfine -w1 -r3 --export-json {} "{} {}"'.format(result, cmd, data)
+    cmd = 'hyperfine -w1 -r3 --export-json {} "{} {}"'.format(result, cmd, data)
     if poetry:
         cmd = "poetry run " + cmd
     return cmd
