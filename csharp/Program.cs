@@ -1,29 +1,19 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Ising
 {
 
     class Program
     {
-        public const double T0 = 0.1;
-        public const double TF = 5.0;
+        public const float T0 = 0.1f;
+        public const float TF = 5.0f;
         public const int N = 64;
         public const int STEPS = 400;
-        static void Main(string[] args)
-        {
-            Console.WriteLine("Hello World!");
-        }
-
-
-        // const int NUM_THREADS = static_cast<int>(std::thread::hardware_concurrency());
-
-        // inline double
-        // rand_double(std::minstd_rand& rng)
-        // {
-        //   return std::generate_canonical<double, 8>(rng);
-        // }
-
         public static void PushNeighbors(Lattice lattice, int i, int j, Queue<(int, int)> queue)
         {
             queue.Enqueue((i, lattice.nearestNeighborsPlus[j]));
@@ -32,7 +22,7 @@ namespace Ising
             queue.Enqueue((lattice.nearestNeighborsPlus[i], j));
         }
 
-        public static (int, int) MetropolisStep(Lattice lattice, double beta)
+        public static (int, int) MetropolisStep(Lattice lattice, float beta)
         {
             var i = lattice.RandomSite();
             var j = lattice.RandomSite();
@@ -43,7 +33,7 @@ namespace Ising
             var s = lattice.Flip(i, j);
             var magnetizationChange = 0;
 
-            var flipProbability = 1 - Math.Exp(-2 * beta);
+            var flipProbability = 1 - MathF.Exp(-2 * beta);
 
             PushNeighbors(lattice, i, j, neighbors);
 
@@ -66,7 +56,7 @@ namespace Ising
 
         }
 
-        public static void Evolve(Lattice lattice, int numberOfSteps, double beta)
+        public static void Evolve(Lattice lattice, int numberOfSteps, float beta)
         {
             for (int i = 0; i < numberOfSteps; i++)
             {
@@ -74,13 +64,13 @@ namespace Ising
             }
         }
 
-        // inline double
+        // inline float
         // average(long agg, int n)
         // {
-        //   return static_cast<double>(agg) / n;
+        //   return static_cast<float>(agg) / n;
         // }
 
-        public static (double, double) TimeAverage(Lattice lattice, int numberOfSteps, double beta)
+        public static (float, float) TimeAverage(Lattice lattice, int numberOfSteps, float beta)
         {
             var energy = lattice.Energy;
             var magnetization = lattice.Magnetization;
@@ -103,12 +93,12 @@ namespace Ising
 
             }
 
-            return ((double)totalEnergy / numberOfSteps, Math.Sqrt((double)totalMagnetizationSquared / numberOfSteps));
+            return ((float)totalEnergy / numberOfSteps, MathF.Sqrt((float)totalMagnetizationSquared / numberOfSteps));
 
         }
 
-        public static (double, double) EnsembleAverage(Lattice lattice,
-                                                       double beta,
+        public static (float, float) EnsembleAverage(Lattice lattice,
+                                                       float beta,
                                                        int numberOfEvolveSteps,
                                                        int numberOfAverageSteps)
         {
@@ -116,85 +106,61 @@ namespace Ising
             return TimeAverage(lattice, numberOfAverageSteps, beta);
         }
 
+        public static void Worker(BlockingCollection<float> ts, BlockingCollection<(float, float, float)> output)
+        {
+            Lattice lattice = new Lattice(N);
 
-        // void
-        // worker(std::queue<double>& ts, std::mutex& mtx, Channel<data_type>& chan)
-        // {
-        //   Lattice<N> lat;
+            while (ts.TryTake(out var t))
+            {
+                var (E, M) = EnsembleAverage(lattice, 1 / t, 1000, 100);
 
-        //   while (true) {
-        //     double t;
+                if (t % 0.1 < 0.01)
+                    Console.WriteLine($"T: {t}");
 
-        //     {
-        //       std::unique_lock<std::mutex> lck(mtx);
 
-        //       if (ts.empty()) {
+                output.Add((t, E, M));
+            }
+        }
 
-        //         break;
-        //       }
+        static void Main(string[] args)
+        {
+            var ts = new BlockingCollection<float>(new ConcurrentQueue<float>());
+            var output = new BlockingCollection<(float, float, float)>(new ConcurrentQueue<(float, float, float)>());
 
-        //       t = ts.front();
-        //       ts.pop();
 
-        //       if (fmod(t, 0.1) < 0.01) {
-        //         std::cout << "T: " << t << std::endl;
-        //       }
-        //     }
+            float dt = (TF - T0) / (STEPS - 1);
+            foreach (var t in Enumerable.Range(0, STEPS).Select(i => T0 + i * dt))
+            {
+                ts.Add(t);
+            }
+            ts.CompleteAdding();
 
-        //     auto observables = ensemble_average(lat, 1. / t, 1000, 100);
+            Task[] tasks =
+                Enumerable.Range(0, Environment.ProcessorCount - 1).Select(
+                _ => Task.Factory.StartNew(() => Worker(ts, output),
+                        creationOptions: TaskCreationOptions.LongRunning)
+                ).ToArray();
 
-        //     chan.put(std::tuple_cat(std::make_tuple(t), observables));
-        //   }
-        // }
+            string filePath = args.Length > 1 ? args[1] : @"data.csv";
 
-        // int
-        // main(int argc, char** argv)
-        // {
-        //   Lattice<N> lat;
+            using (var dataFile = new StreamWriter(filePath))
+            {
+                dataFile.WriteLine("T,U,M_rms");
 
-        //   std::queue<double> ts;
-        //   Channel<data_type> chan;
+                for (var i = 0; i < STEPS; i++)
+                {
+                    var (t, E, M) = output.Take();
+                    dataFile.WriteLine($"{t},{E},{M}");
 
-        //   // Build vector of temperatures
-        //   double dt = (TF - T0) / (STEPS - 1);
-        //   double t = T0;
-        //   for (auto i = 0; i < STEPS; i++) {
-        //     ts.push(t);
-        //     t += dt;
-        //   }
+                }
+            }
 
-        //   std::vector<std::thread> threads;
-        //   std::mutex mtx;
+            foreach (var task in tasks)
+                task.Wait();
 
-        //   for (auto i = 0; i < NUM_THREADS; i++) {
-        //     threads.push_back(
-        //       std::thread([&ts, &mtx, &chan]() { worker(ts, mtx, chan); }));
-        //   }
+        }
 
-        //   std::string file_path = "data.csv";
-        //   if (argc > 1) {
-        //     file_path = argv[1];
 
-        //   }
-        //   std::ofstream data_file(file_path);
-
-        //   if (!data_file.is_open()) {
-        //     std::cerr << "Could not open data file" << std::endl;
-        //     return -1;
-        //   } else {
-        //     data_file << "T,U,M_rms" << std::endl;
-        //     for (int i = 0; i < STEPS; i++) {
-        //       data_type row = chan.take();
-        //       data_file << std::get<0>(row) << ", " << std::get<1>(row) << ", "
-        //                 << std::get<2>(row) << std::endl;
-        //     }
-        //   }
-
-        //   for (std::thread& t : threads)
-        //     t.join();
-
-        //   return 0;
-        // }
 
     }
 }
