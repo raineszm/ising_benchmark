@@ -3,39 +3,50 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Dataflow;
 
 namespace Ising
 {
 
-    class Program
+    class IsingProgram
     {
         public const float T0 = 0.1f;
         public const float TF = 5.0f;
         public const int N = 64;
         public const int STEPS = 400;
-        public static void PushNeighbors(Lattice lattice, int i, int j, Queue<(int, int)> queue)
+
+        public Lattice lattice;
+        public Queue<(int, int)> neighbors;
+
+        public IsingProgram(int size)
         {
-            queue.Enqueue((i, lattice.nearestNeighborsPlus[j]));
-            queue.Enqueue((i, lattice.nearestNeighborsMinus[j]));
-            queue.Enqueue((lattice.nearestNeighborsMinus[i], j));
-            queue.Enqueue((lattice.nearestNeighborsPlus[i], j));
+            lattice = new Lattice(size);
+            neighbors = new Queue<(int, int)>(size * size);
         }
 
-        public static (int, int) MetropolisStep(Lattice lattice, float beta)
+        public void PushNeighbors(int i, int j)
+        {
+            neighbors.Enqueue((i, lattice.nearestNeighborsPlus[j]));
+            neighbors.Enqueue((i, lattice.nearestNeighborsMinus[j]));
+            neighbors.Enqueue((lattice.nearestNeighborsMinus[i], j));
+            neighbors.Enqueue((lattice.nearestNeighborsPlus[i], j));
+        }
+
+        public (int, int) MetropolisStep(float beta)
         {
             var i = lattice.RandomSite();
             var j = lattice.RandomSite();
-            var neighbors = new Queue<(int, int)>();
 
             var energyChange = lattice.EnergyChange(i, j);
 
             var s = lattice.Flip(i, j);
-            var magnetizationChange = 0;
+            var magnetizationChange = -2 * s;
 
             var flipProbability = 1 - MathF.Exp(-2 * beta);
 
-            PushNeighbors(lattice, i, j, neighbors);
+            PushNeighbors(i, j);
 
             while (neighbors.Count > 0)
             {
@@ -47,7 +58,7 @@ namespace Ising
                     energyChange += lattice.EnergyChange(i, j);
                     lattice.Flip(i, j);
 
-                    PushNeighbors(lattice, i, j, neighbors);
+                    PushNeighbors(i, j);
                 }
 
             }
@@ -56,21 +67,16 @@ namespace Ising
 
         }
 
-        public static void Evolve(Lattice lattice, int numberOfSteps, float beta)
+        public void Evolve(int numberOfSteps, float beta)
         {
             for (int i = 0; i < numberOfSteps; i++)
             {
-                MetropolisStep(lattice, beta);
+                MetropolisStep(beta);
             }
         }
 
-        // inline float
-        // average(long agg, int n)
-        // {
-        //   return static_cast<float>(agg) / n;
-        // }
 
-        public static (float, float) TimeAverage(Lattice lattice, int numberOfSteps, float beta)
+        public (float, float) TimeAverage(int numberOfSteps, float beta)
         {
             var energy = lattice.Energy;
             var magnetization = lattice.Magnetization;
@@ -82,7 +88,7 @@ namespace Ising
 
             for (var i = 0; i < numberOfSteps; i++)
             {
-                var (energyChange, magnetizationChange) = MetropolisStep(lattice, beta);
+                var (energyChange, magnetizationChange) = MetropolisStep(beta);
 
                 energy += energyChange;
                 magnetization += magnetizationChange;
@@ -97,70 +103,69 @@ namespace Ising
 
         }
 
-        public static (float, float) EnsembleAverage(Lattice lattice,
-                                                       float beta,
-                                                       int numberOfEvolveSteps,
-                                                       int numberOfAverageSteps)
+        public (float, float) EnsembleAverage(
+            float beta,
+            int numberOfEvolveSteps,
+            int numberOfAverageSteps)
         {
-            Evolve(lattice, numberOfEvolveSteps, beta);
-            return TimeAverage(lattice, numberOfAverageSteps, beta);
+            Evolve(numberOfEvolveSteps, beta);
+            return TimeAverage(numberOfAverageSteps, beta);
         }
 
-        public static void Worker(BlockingCollection<float> ts, BlockingCollection<(float, float, float)> output)
+        public (float, float, float) Work(float t)
         {
-            Lattice lattice = new Lattice(N);
+            if (t % 0.1 < 0.01)
+                Console.WriteLine($"From {Thread.CurrentThread.ManagedThreadId} T: {t}");
+            var (E, M) = EnsembleAverage(1 / t, 1000, 100);
+            return (t, E, M);
+        }
 
-            while (ts.TryTake(out var t))
+        public static TransformBlock<float, (float, float, float)> WorkerBlock()
+        {
+            var program = new ThreadLocal<IsingProgram>(() => new IsingProgram(N));
+            var options = new ExecutionDataflowBlockOptions
             {
-                var (E, M) = EnsembleAverage(lattice, 1 / t, 1000, 100);
-
-                if (t % 0.1 < 0.01)
-                    Console.WriteLine($"T: {t}");
-
-
-                output.Add((t, E, M));
-            }
+                MaxDegreeOfParallelism = Environment.ProcessorCount
+            };
+            return new TransformBlock<float, (float, float, float)>(
+                t => program.Value.Work(t), options);
         }
 
         static void Main(string[] args)
         {
-            var ts = new BlockingCollection<float>(new ConcurrentQueue<float>());
-            var output = new BlockingCollection<(float, float, float)>(new ConcurrentQueue<(float, float, float)>());
-
+            var input = new BufferBlock<float>();
 
             float dt = (TF - T0) / (STEPS - 1);
             foreach (var t in Enumerable.Range(0, STEPS).Select(i => T0 + i * dt))
             {
-                ts.Add(t);
+                input.Post(t);
             }
-            ts.CompleteAdding();
-
-            Task[] tasks =
-                Enumerable.Range(0, Environment.ProcessorCount - 1).Select(
-                _ => Task.Factory.StartNew(() => Worker(ts, output),
-                        creationOptions: TaskCreationOptions.LongRunning)
-                ).ToArray();
 
             string filePath = args.Length > 1 ? args[1] : @"data.csv";
 
-            using (var dataFile = new StreamWriter(filePath))
+            using var dataFile = new StreamWriter(filePath);
+
+            var linkOptions = new DataflowLinkOptions
             {
-                dataFile.WriteLine("T,U,M_rms");
+                PropagateCompletion = true
+            };
 
-                for (var i = 0; i < STEPS; i++)
+            dataFile.WriteLine("T,U,M_rms");
+
+            var writer = new ActionBlock<(float, float, float)>(
+                data =>
                 {
-                    var (t, E, M) = output.Take();
+                    var (t, E, M) = data;
                     dataFile.WriteLine($"{t},{E},{M}");
+                });
 
-                }
-            }
+            var worker = WorkerBlock();
+            input.LinkTo(worker, linkOptions);
+            worker.LinkTo(writer, linkOptions);
 
-            foreach (var task in tasks)
-                task.Wait();
-
+            input.Complete();
+            writer.Completion.Wait();
         }
-
-
 
     }
 }

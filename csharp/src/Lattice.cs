@@ -5,9 +5,9 @@ namespace Ising
 {
     public class Lattice
     {
-        protected int[] sites;
-        public int[] nearestNeighborsPlus;
-        public int[] nearestNeighborsMinus;
+        protected readonly int[] sites;
+        public readonly int[] nearestNeighborsPlus;
+        public readonly int[] nearestNeighborsMinus;
 
         public readonly Random random = new Random();
         public readonly int size;
