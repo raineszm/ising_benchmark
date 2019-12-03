@@ -1,88 +1,79 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 
 namespace Ising
 {
-
-    class IsingProgram
+    public class IsingProgram
     {
-        public const float T0 = 0.1f;
-        public const float TF = 5.0f;
-        public const int N = 64;
-        public const int STEPS = 400;
+        private const float T0 = 0.1f;
+        private const float TF = 5.0f;
+        private const int N = 64;
+        private const int STEPS = 400;
 
-        public Lattice lattice;
-        public Queue<(int, int)> neighbors;
+        private readonly Lattice _lattice;
+        private readonly Queue<(int, int)> _neighbors;
 
-        public IsingProgram(int size)
+        private IsingProgram(int size)
         {
-            lattice = new Lattice(size);
-            neighbors = new Queue<(int, int)>(size * size);
+            _lattice = new Lattice(size);
+            _neighbors = new Queue<(int, int)>(size * size);
         }
 
-        public void PushNeighbors(int i, int j)
+        private void PushNeighbors(int i, int j)
         {
-            neighbors.Enqueue((i, lattice.nearestNeighborsPlus[j]));
-            neighbors.Enqueue((i, lattice.nearestNeighborsMinus[j]));
-            neighbors.Enqueue((lattice.nearestNeighborsMinus[i], j));
-            neighbors.Enqueue((lattice.nearestNeighborsPlus[i], j));
+            _neighbors.Enqueue((i, _lattice.NearestNeighborsPlus[j]));
+            _neighbors.Enqueue((i, _lattice.NearestNeighborsMinus[j]));
+            _neighbors.Enqueue((_lattice.NearestNeighborsMinus[i], j));
+            _neighbors.Enqueue((_lattice.NearestNeighborsPlus[i], j));
         }
 
-        public (int, int) MetropolisStep(float beta)
+        private (int, int) MetropolisStep(float beta)
         {
-            var i = lattice.RandomSite();
-            var j = lattice.RandomSite();
+            var i = _lattice.RandomSite();
+            var j = _lattice.RandomSite();
 
-            var energyChange = lattice.EnergyChange(i, j);
+            var energyChange = _lattice.EnergyChange(i, j);
 
-            var s = lattice.Flip(i, j);
+            var s = _lattice.Flip(i, j);
             var magnetizationChange = -2 * s;
 
             var flipProbability = 1 - MathF.Exp(-2 * beta);
 
             PushNeighbors(i, j);
 
-            while (neighbors.Count > 0)
+            while (_neighbors.Count > 0)
             {
-                (i, j) = neighbors.Dequeue();
+                (i, j) = _neighbors.Dequeue();
 
-                if (lattice[i, j] == s && lattice.random.NextDouble() < flipProbability)
+                if (_lattice[i, j] == s && _lattice.Random.NextDouble() < flipProbability)
                 {
                     magnetizationChange -= 2 * s;
-                    energyChange += lattice.EnergyChange(i, j);
-                    lattice.Flip(i, j);
+                    energyChange += _lattice.EnergyChange(i, j);
+                    _lattice.Flip(i, j);
 
                     PushNeighbors(i, j);
                 }
-
             }
 
             return (energyChange, magnetizationChange);
-
         }
 
-        public void Evolve(int numberOfSteps, float beta)
+        private void Evolve(int numberOfSteps, float beta)
         {
-            for (int i = 0; i < numberOfSteps; i++)
-            {
-                MetropolisStep(beta);
-            }
+            for (var i = 0; i < numberOfSteps; i++) MetropolisStep(beta);
         }
 
 
-        public (float, float) TimeAverage(int numberOfSteps, float beta)
+        private (float, float) TimeAverage(int numberOfSteps, float beta)
         {
-            var energy = lattice.Energy;
-            var magnetization = lattice.Magnetization;
+            var energy = _lattice.Energy;
+            var magnetization = _lattice.Magnetization;
 
             var totalEnergy = 0;
-            var totalMagnetization = 0;
             var totalMagnetizationSquared = 0;
 
 
@@ -94,16 +85,13 @@ namespace Ising
                 magnetization += magnetizationChange;
 
                 totalEnergy += energy;
-                totalMagnetization += magnetization;
                 totalMagnetizationSquared += magnetization * magnetization;
-
             }
 
-            return ((float)totalEnergy / numberOfSteps, MathF.Sqrt((float)totalMagnetizationSquared / numberOfSteps));
-
+            return ((float) totalEnergy / numberOfSteps, MathF.Sqrt((float) totalMagnetizationSquared / numberOfSteps));
         }
 
-        public (float, float) EnsembleAverage(
+        private (float, float) EnsembleAverage(
             float beta,
             int numberOfEvolveSteps,
             int numberOfAverageSteps)
@@ -112,7 +100,7 @@ namespace Ising
             return TimeAverage(numberOfAverageSteps, beta);
         }
 
-        public (float, float, float) Work(float t)
+        private (float, float, float) Work(float t)
         {
             if (t % 0.1 < 0.01)
                 Console.WriteLine($"From {Thread.CurrentThread.ManagedThreadId} T: {t}");
@@ -120,7 +108,7 @@ namespace Ising
             return (t, E, M);
         }
 
-        public static TransformBlock<float, (float, float, float)> WorkerBlock()
+        private static TransformBlock<float, (float, float, float)> WorkerBlock()
         {
             var program = new ThreadLocal<IsingProgram>(() => new IsingProgram(N));
             var options = new ExecutionDataflowBlockOptions
@@ -131,17 +119,14 @@ namespace Ising
                 t => program.Value.Work(t), options);
         }
 
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             var input = new BufferBlock<float>();
 
-            float dt = (TF - T0) / (STEPS - 1);
-            foreach (var t in Enumerable.Range(0, STEPS).Select(i => T0 + i * dt))
-            {
-                input.Post(t);
-            }
+            const float dt = (TF - T0) / (STEPS - 1);
+            foreach (var t in Enumerable.Range(0, STEPS).Select(i => T0 + i * dt)) input.Post(t);
 
-            string filePath = args.Length > 1 ? args[1] : @"data.csv";
+            var filePath = args.Length > 1 ? args[1] : @"data.csv";
 
             using var dataFile = new StreamWriter(filePath);
 
@@ -156,7 +141,7 @@ namespace Ising
                 data =>
                 {
                     var (t, E, M) = data;
-                    dataFile.WriteLine($"{t},{E},{M}");
+                    dataFile?.WriteLine($"{t},{E},{M}");
                 });
 
             var worker = WorkerBlock();
@@ -166,6 +151,5 @@ namespace Ising
             input.Complete();
             writer.Completion.Wait();
         }
-
     }
 }
