@@ -50,20 +50,10 @@ namespace Ising
                    + this[NearestNeighborsMinus[i], j];
         }
 
-        public int Flip(int i, int j)
-        {
-            return -(this[i, j] *= -1);
-        }
+        public int Flip(int i, int j) => -(this[i, j] *= -1);
 
-        public int RandomSite()
-        {
-            return Random.Next() / (int.MaxValue / _size + 1);
-        }
+        public int RandomSite() => Random.Next() / (int.MaxValue / _size + 1);
 
-
-        public int EnergyChange(int i, int j)
-        {
-            return 2 * this[i, j] * SumNeighbors(i, j);
-        }
+        public int EnergyChange(int i, int j) => 2 * this[i, j] * SumNeighbors(i, j);
     }
 }

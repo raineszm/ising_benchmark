@@ -7,17 +7,17 @@ using System.Threading.Tasks.Dataflow;
 
 namespace Ising
 {
-    public class IsingProgram
+    public class Program
     {
         private const float T0 = 0.1f;
-        private const float TF = 5.0f;
+        private const float Tf = 5.0f;
         private const int N = 64;
-        private const int STEPS = 400;
+        private const int Steps = 400;
 
         private readonly Lattice _lattice;
         private readonly Queue<(int, int)> _neighbors;
 
-        private IsingProgram(int size)
+        private Program(int size)
         {
             _lattice = new Lattice(size);
             _neighbors = new Queue<(int, int)>(size * size);
@@ -49,14 +49,13 @@ namespace Ising
             {
                 (i, j) = _neighbors.Dequeue();
 
-                if (_lattice[i, j] == s && _lattice.Random.NextDouble() < flipProbability)
-                {
-                    magnetizationChange -= 2 * s;
-                    energyChange += _lattice.EnergyChange(i, j);
-                    _lattice.Flip(i, j);
+                if (_lattice[i, j] != s || !(_lattice.Random.NextDouble() < flipProbability)) continue;
 
-                    PushNeighbors(i, j);
-                }
+                magnetizationChange -= 2 * s;
+                energyChange += _lattice.EnergyChange(i, j);
+                _lattice.Flip(i, j);
+
+                PushNeighbors(i, j);
             }
 
             return (energyChange, magnetizationChange);
@@ -104,13 +103,13 @@ namespace Ising
         {
             if (t % 0.1 < 0.01)
                 Console.WriteLine($"From {Thread.CurrentThread.ManagedThreadId} T: {t}");
-            var (E, M) = EnsembleAverage(1 / t, 1000, 100);
-            return (t, E, M);
+            var (energy, rmsMagnetization) = EnsembleAverage(1 / t, 1000, 100);
+            return (t, energy, rmsMagnetization);
         }
 
         private static TransformBlock<float, (float, float, float)> WorkerBlock()
         {
-            var program = new ThreadLocal<IsingProgram>(() => new IsingProgram(N));
+            var program = new ThreadLocal<Program>(() => new Program(N));
             var options = new ExecutionDataflowBlockOptions
             {
                 MaxDegreeOfParallelism = Environment.ProcessorCount
@@ -123,8 +122,8 @@ namespace Ising
         {
             var input = new BufferBlock<float>();
 
-            const float dt = (TF - T0) / (STEPS - 1);
-            foreach (var t in Enumerable.Range(0, STEPS).Select(i => T0 + i * dt)) input.Post(t);
+            const float dt = (Tf - T0) / (Steps - 1);
+            foreach (var t in Enumerable.Range(0, Steps).Select(i => T0 + i * dt)) input.Post(t);
 
             var filePath = args.Length > 1 ? args[1] : @"data.csv";
 
@@ -140,8 +139,9 @@ namespace Ising
             var writer = new ActionBlock<(float, float, float)>(
                 data =>
                 {
-                    var (t, E, M) = data;
-                    dataFile?.WriteLine($"{t},{E},{M}");
+                    var (t, energy, rmsMagnetization) = data;
+                    // ReSharper disable once AccessToDisposedClosure
+                    dataFile?.WriteLine($"{t},{energy},{rmsMagnetization}");
                 });
 
             var worker = WorkerBlock();
