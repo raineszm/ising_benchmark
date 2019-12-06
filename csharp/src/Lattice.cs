@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Ising
@@ -7,8 +8,10 @@ namespace Ising
     {
         private readonly int[] _sites;
         private readonly int _size;
-        public readonly int[] NearestNeighborsMinus;
-        public readonly int[] NearestNeighborsPlus;
+        public readonly int[] NearestNeighborsMinusX;
+        public readonly int[] NearestNeighborsPlusX;
+        public readonly int[] NearestNeighborsMinusY;
+        public readonly int[] NearestNeighborsPlusY;
 
         public readonly Random Random = new Random();
 
@@ -17,15 +20,29 @@ namespace Ising
             _size = size;
             _sites = new int[size * size];
             Array.Fill(_sites, 1);
-            NearestNeighborsMinus = Enumerable.Range(0, size).Select(i => (i + size - 1) % size).ToArray();
-            NearestNeighborsPlus = Enumerable.Range(0, size).Select(i => (i + 1) % size).ToArray();
+            var indices = Enumerable.Range(0, size).ToArray();
+            var nearestNeighborsMinus = indices.Select(i => (i + size - 1) % size).ToArray();
+            var nearestNeighborsPlus = indices.Select(i => (i + 1) % size).ToArray();
+            NearestNeighborsMinusX = LinearProduct(nearestNeighborsMinus, indices);
+            NearestNeighborsPlusX = LinearProduct(nearestNeighborsPlus, indices);
+            NearestNeighborsMinusY = LinearProduct(indices, nearestNeighborsMinus);
+            NearestNeighborsPlusY = LinearProduct(indices, nearestNeighborsPlus);
         }
 
-
-        public int this[int i, int j]
+        private int[] LinearProduct(IEnumerable<int> xs, IEnumerable<int> ys)
         {
-            get => _sites[_size * j + i];
-            private set => _sites[_size * j + i] = value;
+            return (from j in ys
+                    from i in xs
+                    select LinearIndex(i, j)
+                ).ToArray();
+        }
+
+        private int LinearIndex(int i, int j) => _size * j + i;
+
+        public int this[int i]
+        {
+            get => _sites[i];
+            private set => _sites[i] = value;
         }
 
         public int Magnetization => _sites.Sum();
@@ -35,25 +52,24 @@ namespace Ising
             get
             {
                 var total = 0;
-                for (var i = 0; i < _size; i++)
-                for (var j = 0; j < _size; j++)
-                    total -= this[i, j] * (this[NearestNeighborsPlus[i], j] + this[i, NearestNeighborsMinus[j]]);
+                for (var i = 0; i < _size * _size; i++)
+                    total -= this[i] * (this[NearestNeighborsPlusX[i]] + this[NearestNeighborsMinusY[i]]);
                 return total;
             }
         }
 
-        private int SumNeighbors(int i, int j)
+        private int SumNeighbors(int i)
         {
-            return this[i, NearestNeighborsMinus[j]]
-                   + this[i, NearestNeighborsPlus[j]]
-                   + this[NearestNeighborsPlus[i], j]
-                   + this[NearestNeighborsMinus[i], j];
+            return this[NearestNeighborsMinusX[i]]
+                   + this[NearestNeighborsPlusX[i]]
+                   + this[NearestNeighborsPlusY[i]]
+                   + this[NearestNeighborsMinusY[i]];
         }
 
-        public int Flip(int i, int j) => -(this[i, j] *= -1);
+        public int Flip(int i) => -(this[i] *= -1);
 
-        public int RandomSite() => Random.Next() / (int.MaxValue / _size + 1);
+        public int RandomSite() => Random.Next() / (int.MaxValue / (_size * _size) + 1);
 
-        public int EnergyChange(int i, int j) => 2 * this[i, j] * SumNeighbors(i, j);
+        public int EnergyChange(int i) => 2 * this[i] * SumNeighbors(i);
     }
 }

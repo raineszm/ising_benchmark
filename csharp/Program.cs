@@ -15,47 +15,46 @@ namespace Ising
         private const int Steps = 400;
 
         private readonly Lattice _lattice;
-        private readonly Queue<(int, int)> _neighbors;
+        private readonly Queue<int> _neighbors;
 
         private Program(int size)
         {
             _lattice = new Lattice(size);
-            _neighbors = new Queue<(int, int)>(size * size);
+            _neighbors = new Queue<int>(size * size);
         }
 
-        private void PushNeighbors(int i, int j)
+        private void PushNeighbors(int i)
         {
-            _neighbors.Enqueue((i, _lattice.NearestNeighborsPlus[j]));
-            _neighbors.Enqueue((i, _lattice.NearestNeighborsMinus[j]));
-            _neighbors.Enqueue((_lattice.NearestNeighborsMinus[i], j));
-            _neighbors.Enqueue((_lattice.NearestNeighborsPlus[i], j));
+            _neighbors.Enqueue(_lattice.NearestNeighborsMinusX[i]);
+            _neighbors.Enqueue(_lattice.NearestNeighborsMinusY[i]);
+            _neighbors.Enqueue(_lattice.NearestNeighborsPlusX[i]);
+            _neighbors.Enqueue(_lattice.NearestNeighborsPlusY[i]);
         }
 
         private (int, int) MetropolisStep(float beta)
         {
-            var i = _lattice.RandomSite();
-            var j = _lattice.RandomSite();
+            var site = _lattice.RandomSite();
 
-            var energyChange = _lattice.EnergyChange(i, j);
+            var energyChange = _lattice.EnergyChange(site);
 
-            var s = _lattice.Flip(i, j);
+            var s = _lattice.Flip(site);
             var magnetizationChange = -2 * s;
 
             var flipProbability = 1 - MathF.Exp(-2 * beta);
 
-            PushNeighbors(i, j);
+            PushNeighbors(site);
 
             while (_neighbors.Count > 0)
             {
-                (i, j) = _neighbors.Dequeue();
+                site = _neighbors.Dequeue();
 
-                if (_lattice[i, j] != s || !(_lattice.Random.NextDouble() < flipProbability)) continue;
+                if (_lattice[site] != s || !(_lattice.Random.NextDouble() < flipProbability)) continue;
 
                 magnetizationChange -= 2 * s;
-                energyChange += _lattice.EnergyChange(i, j);
-                _lattice.Flip(i, j);
+                energyChange += _lattice.EnergyChange(site);
+                _lattice.Flip(site);
 
-                PushNeighbors(i, j);
+                PushNeighbors(site);
             }
 
             return (energyChange, magnetizationChange);
