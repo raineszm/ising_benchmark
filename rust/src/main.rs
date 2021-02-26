@@ -4,7 +4,6 @@ extern crate num_cpus;
 pub mod system;
 use system::System;
 
-use rand::Rng;
 use std::fs::File;
 use std::io::Write;
 
@@ -15,6 +14,8 @@ use std::sync::mpsc::channel;
 use std::thread;
 
 use std::env;
+
+use rand::Rng;
 
 /// Linear dimension of the Lattice.
 pub const N: i32 = 64;
@@ -59,7 +60,7 @@ pub fn metropolis_step(sys: &mut System,
 
     while let Some((i, j)) = neighbors.pop_front() {
 
-        if sys.at(i, j) == s && sys.rng.next_f64() < flip_prob {
+        if sys.at(i, j) == s && sys.rng.gen::<f64>() < flip_prob {
             dM -= 2*s;
             dE += sys.deltaE(i, j);
 
@@ -140,7 +141,7 @@ fn next_t<T>(ts: &Arc<Mutex<VecDeque<T>>>)
 #[allow(non_snake_case)]
 fn main() {
 
-    /// Number of threads to parallelize computation over.
+    // Number of threads to parallelize computation over.
     let NUM_THREADS: usize = num_cpus::get();
 
 

@@ -1,7 +1,7 @@
 extern crate rand;
 
-use std::u32;
-use self::rand::{Rng, XorShiftRng};
+use rand::{SeedableRng, RngCore};
+use rand::rngs::SmallRng;
 
 /// Description of the state of a 2D Ising System
 ///
@@ -17,7 +17,7 @@ pub struct System {
     /// Lookup table of nearest neighbors
     nnminus: Vec<usize>,
     /// Random number generator for picking random sites.
-    pub rng: XorShiftRng,
+    pub rng: SmallRng,
 }
 
 impl System {
@@ -28,7 +28,7 @@ impl System {
             sites: vec![1; n*n],
             nnplus: (0..n).map(|i| (i + 1) % n).collect(),
             nnminus: (0..n).map(|i| (n + i - 1) % n).collect(),
-            rng: rand::weak_rng(),
+            rng: SmallRng::from_entropy(),
         }
     }
 
