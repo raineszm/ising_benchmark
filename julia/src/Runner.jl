@@ -8,22 +8,13 @@ const STEPS = 400
 const T0 = 0.1
 const TF = 5
 
-function run_sim(N, c_in, c_out, LOCK)
+function run_sim(N, c_in, c_out)
     ccall(:srand, Cvoid, (Cuint,), floor(Int, time()))
 
     lat = Metropolis.Lattice(N)
 
-    while isready(c_in)
-        put!(LOCK, true)
-        if !isready(LOCK)
-            take!(LOCK)
-            return
-        else
-            t = take!(c_in)
-            take!(LOCK)
-        end
-
-
+    while true
+        t = take!(c_in)
         (M, U) = Metropolis.ensemble_av(lat, 1/t, 1000, 100)
         put!(c_out, (t, M, U))
     end
@@ -40,12 +31,11 @@ function main(data_file)
     T = LinRange(T0, TF, STEPS)
     c_in = RemoteChannel(() -> Channel{Float64}(STEPS))
     c_out = RemoteChannel(() -> Channel{Tuple{Float64, Float64, Float64}}(STEPS))
-    c_lock = RemoteChannel(() -> Channel{Bool}(1))
 
     @async feed_jobs(c_in, T)
 
     for p in workers()
-        remote_do(run_sim, p, N, c_in, c_out, c_lock)
+        remote_do(run_sim, p, N, c_in, c_out)
     end
 
     open(data_file, "w") do out
