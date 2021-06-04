@@ -4,7 +4,6 @@ import Distributed: @everywhere
 @everywhere import Metropolis
 
 data_file = "data.csv"
-println(ARGS)
 if length(ARGS) > 0
     data_file = ARGS[1]
 end

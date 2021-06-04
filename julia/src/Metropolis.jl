@@ -115,10 +115,6 @@ end
 
 function ensemble_av(lattice, beta, n_evolve, n_average)
     T = 1/beta
-    #Update us on the simulation progress
-    if mod(T, 0.1) < 0.01
-        println(T)
-    end
 
     evolve!(lattice, n_evolve, beta)
     time_average!(lattice, n_average, beta)

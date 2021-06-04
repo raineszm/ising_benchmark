@@ -42,8 +42,8 @@ function main(data_file)
 
     futures = Vector{Future}(undef, nworkers())
 
-    for i in 1:nworkers()
-        futures[i] =  @spawn run_sim(N, c_in, c_out, c_lock)
+    for i in nworkers()
+        @spawn run_sim(N, c_in, c_out, c_lock)
     end
 
     open(data_file, "w") do out
@@ -52,6 +52,12 @@ function main(data_file)
 
         for i in 1:STEPS
             (t, M, U) = take!(c_out)
+            #
+            ##Update us on the simulation progress
+            if mod(t, 0.1) < 0.01
+                println(t)
+            end
+
             @printf(out, "%f\t%f\t%f\n", t, abs(M), U)
             flush(out)
         end
