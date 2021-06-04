@@ -1,5 +1,5 @@
 module Runner
-using Distributed: @spawn, RemoteChannel, Future, nworkers
+using Distributed: RemoteChannel, workers, remote_do
 using Printf: @printf
 import ..Metropolis
 
@@ -29,21 +29,23 @@ function run_sim(N, c_in, c_out, LOCK)
     end
 end
 
+function feed_jobs(c_in, T)
+    for t in T
+        put!(c_in, t)
+    end
+    close(c_in)
+end
+
 function main(data_file)
     T = LinRange(T0, TF, STEPS)
     c_in = RemoteChannel(() -> Channel{Float64}(STEPS))
     c_out = RemoteChannel(() -> Channel{Tuple{Float64, Float64, Float64}}(STEPS))
     c_lock = RemoteChannel(() -> Channel{Bool}(1))
 
-    for t in T
-        put!(c_in, t)
-    end
-    close(c_in)
+    @async feed_jobs(c_in, T)
 
-    futures = Vector{Future}(undef, nworkers())
-
-    for i in nworkers()
-        @spawn run_sim(N, c_in, c_out, c_lock)
+    for p in workers()
+        remote_do(run_sim, p, N, c_in, c_out, c_lock)
     end
 
     open(data_file, "w") do out
@@ -52,7 +54,7 @@ function main(data_file)
 
         for i in 1:STEPS
             (t, M, U) = take!(c_out)
-            #
+
             ##Update us on the simulation progress
             if mod(t, 0.1) < 0.01
                 println(t)
