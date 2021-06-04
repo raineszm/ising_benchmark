@@ -2,12 +2,14 @@
 
 module Metropolis
 using DataStructures: Deque
+using Random: MersenneTwister, AbstractRNG
 
 mutable struct Lattice
     N :: Int
     nn_plus :: Vector{Int}
     nn_minus :: Vector{Int}
     spins :: Array{Int, 2}
+    rng :: AbstractRNG
 end
 
 function Lattice(N :: Int)
@@ -15,10 +17,8 @@ function Lattice(N :: Int)
     nn_plus = [r[end], r[1:(end-1)]...]
     nn_minus = [r[2:end]..., r[1]]
     spins = ones(Int, N, N)
-    Lattice(N, nn_plus, nn_minus, spins)
+    Lattice(N, nn_plus, nn_minus, spins, MersenneTwister())
 end
-
-crand(n :: Int) = ccall(:rand, Cint, ()) % n + 1
 
 #Calculate the energy change due to a spin flip
 function delta_E(lattice :: Lattice,
@@ -44,8 +44,9 @@ end
 
 
 function metropolis_step!(lattice :: Lattice, beta :: Float64)
-    i = crand(lattice.N)
-    j = crand(lattice.N)
+    i = rand(lattice.rng, 1:lattice.N)
+    j = rand(lattice.rng, 1:lattice.N)
+
 
     neighbors = Deque{Tuple{Int, Int}}()
 
@@ -61,7 +62,7 @@ function metropolis_step!(lattice :: Lattice, beta :: Float64)
 
     while !isempty(neighbors)
         i, j = popfirst!(neighbors)
-        if lattice.spins[i, j] == spin && ccall(:rand, Cfloat, ()) < flip_prob
+        if lattice.spins[i, j] == spin && rand(lattice.rng) < flip_prob
             dM -= 2*spin
             dE += delta_E(lattice, i, j)
 

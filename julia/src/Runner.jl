@@ -9,9 +9,9 @@ const T0 = 0.1
 const TF = 5
 
 function run_sim(N, c_in, c_out)
-    ccall(:srand, Cvoid, (Cuint,), floor(Int, time()))
-
     lat = Metropolis.Lattice(N)
+
+    println("Started worker")
 
     while true
         t = take!(c_in)
@@ -37,6 +37,9 @@ function main(data_file)
     for p in workers()
         remote_do(run_sim, p, N, c_in, c_out)
     end
+
+    println("Starting")
+
 
     open(data_file, "w") do out
         @printf(out, "#T\tM\tU\n")
