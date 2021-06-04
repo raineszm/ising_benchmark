@@ -12,4 +12,10 @@ includes:
   cpp:
     taskfile: ./cpp/Taskfile.yml
     dir: ./cpp
+  numba:
+    taskfile: ./numba/Taskfile.yml
+    dir: ./numba
+  pypy:
+    taskfile: ./pypy/Taskfile.yml
+    dir: ./pypy
 
