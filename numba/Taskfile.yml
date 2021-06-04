@@ -1,0 +1,11 @@
+# https://taskfile.dev
+
+version: '3'
+
+tasks:
+  benchmark:
+    vars:
+      TIME_ACTION: "poetry run python run_sim.py"
+    cmds:
+      - ../scripts/benchmark.sh numba "{{.TIME_ACTION}}"
+    desc: run the python benchmark

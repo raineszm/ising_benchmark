@@ -1,0 +1,17 @@
+# https://taskfile.dev
+
+version: '3'
+
+tasks:
+  build:
+    cmds:
+      - cmake -H. -B_builds -DCMAKE_BUILD_TYPE=Release
+      - cmake --build _builds
+    desc: build the cpp source
+
+  benchmark:
+    deps:
+      - build
+    cmds:
+      - ../scripts/benchmark.sh cpp "_builds/ising"
+    desc: run the cpp benchmark

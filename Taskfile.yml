@@ -1,0 +1,15 @@
+# https://taskfile.dev
+
+version: '3'
+
+includes:
+  julia:
+    taskfile: ./julia/Taskfile.yml
+    dir: ./julia
+  rust:
+    taskfile: ./rust/Taskfile.yml
+    dir: ./rust
+  cpp:
+    taskfile: ./cpp/Taskfile.yml
+    dir: ./cpp
+

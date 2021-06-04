@@ -1,0 +1,16 @@
+# https://taskfile.dev
+
+version: '3'
+
+tasks:
+  build:
+    cmds:
+      - cargo build --release
+    desc: build the rust source
+
+  benchmark:
+    deps:
+      - build
+    cmds:
+      - ../scripts/benchmark.sh rust "target/release/ising_rust"
+    desc: run the rust benchmark
