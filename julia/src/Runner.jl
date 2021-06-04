@@ -2,7 +2,7 @@ module Runner
 using Printf: @printf
 import ..Metropolis
 
-const N = 256
+const N = 64
 const STEPS = 400
 const T0 = 0.1
 const TF = 5

@@ -61,7 +61,7 @@ function metropolis_step!(lattice :: Lattice, beta :: Float64)
 
     while !isempty(neighbors)
         i, j = popfirst!(neighbors)
-        if lattice.spins[i, j] == spin && ccall(:rand, Cint, ()) < flip_prob
+        if lattice.spins[i, j] == spin && ccall(:rand, Cfloat, ()) < flip_prob
             dM -= 2*spin
             dE += delta_E(lattice, i, j)
 
