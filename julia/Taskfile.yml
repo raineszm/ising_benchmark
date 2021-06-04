@@ -5,7 +5,7 @@ version: '3'
 tasks:
   benchmark:
     vars:
-      TIME_ACTION: "julia -p auto -O3 --check-bounds=no do_sim.jl"
+      TIME_ACTION: "julia -O3 --check-bounds=no do_sim.jl"
     cmds:
       - ../scripts/benchmark.sh julia "{{.TIME_ACTION}}"
     desc: run the julia benchmark
