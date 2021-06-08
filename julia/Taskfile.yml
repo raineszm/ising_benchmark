@@ -7,5 +7,5 @@ tasks:
     vars:
       TIME_ACTION: "julia -p auto -O3 --check-bounds=no do_sim.jl"
     cmds:
-      - ../scripts/benchmark.sh julia "{{.TIME_ACTION}}"
+      - ../scripts/benchmark.sh julia "{{.TIME_ACTION}}" {{.CLI_ARGS}}
     desc: run the julia benchmark
