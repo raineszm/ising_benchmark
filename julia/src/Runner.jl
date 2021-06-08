@@ -1,5 +1,5 @@
 module Runner
-using Distributed: RemoteChannel, workers, remote_do
+using Distributed: RemoteChannel, RemoteException, workers, remote_do
 using Printf: @printf
 import ..Metropolis
 
@@ -13,10 +13,20 @@ function run_sim(N, c_in, c_out)
 
     println("Started worker")
 
-    while true
-        t = take!(c_in)
-        (M, U) = Metropolis.ensemble_av(lat, 1/t, 1000, 100)
-        put!(c_out, (t, M, U))
+    try
+        while true
+            t = take!(c_in)
+            (M, U) = Metropolis.ensemble_av(lat, 1/t, 1000, 100)
+            put!(c_out, (t, M, U))
+        end
+    catch err
+        if isa(err, RemoteException)
+            captured = err.captured.ex
+            if isa(captured, InvalidStateException)
+                return
+            end
+        end
+        throw(err)
     end
 end
 

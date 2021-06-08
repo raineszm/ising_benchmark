@@ -9,3 +9,7 @@ tasks:
     cmds:
       - ../scripts/benchmark.sh julia "{{.TIME_ACTION}}" {{.CLI_ARGS}}
     desc: run the julia benchmark
+  btime:
+    cmds:
+      - julia -p auto -O3 --check-bounds=no benchmark.jl
+    desc: time only the running of the code using bencmark tools
