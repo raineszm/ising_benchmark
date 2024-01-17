@@ -86,7 +86,7 @@ pub fn evolve(sys: &mut System,
 }
 
 #[allow(non_snake_case)]
-/// Accumulate the energy and magenization of the system over `n` steps.
+/// Accumulate the energy and magnetization of the system over `n` steps.
 ///
 /// We perform `n` [Metropolis steps](metropolis_step), noting the energy and
 /// magnetization at each step. We then return the average of these quantities.

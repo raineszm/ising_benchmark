@@ -24,7 +24,7 @@ impl System {
     /// Create a new `n` by `n` [System]()
     pub fn new(n: usize) -> System {
         System {
-            n: n,
+            n,
             sites: vec![1; n*n],
             nnplus: (0..n).map(|i| (i + 1) % n).collect(),
             nnminus: (0..n).map(|i| (n + i - 1) % n).collect(),
@@ -85,7 +85,7 @@ impl System {
     ///
     /// This is just the sum of all spins.
     pub fn magnetization(&self) -> i32 {
-        self.sites.iter().fold(0, |acc, &s| acc + s)
+        self.sites.iter().sum()
     }
 
     /// Returns a random index along one linear dimension.
