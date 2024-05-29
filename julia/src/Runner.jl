@@ -16,7 +16,7 @@ function run_sim(N, c_in, c_out)
     try
         while true
             t = take!(c_in)
-            (M, U) = Metropolis.ensemble_av(lat, 1/t, 1000, 100)
+            (M, U) = Metropolis.ensemble_av(lat, 1 / t, 1000, 100)
             put!(c_out, (t, M, U))
         end
     catch err
@@ -40,7 +40,7 @@ end
 function main(data_file)
     T = LinRange(T0, TF, STEPS)
     c_in = RemoteChannel(() -> Channel{Float64}(STEPS))
-    c_out = RemoteChannel(() -> Channel{Tuple{Float64, Float64, Float64}}(STEPS))
+    c_out = RemoteChannel(() -> Channel{Tuple{Float64,Float64,Float64}}(STEPS))
 
     @async feed_jobs(c_in, T)
 

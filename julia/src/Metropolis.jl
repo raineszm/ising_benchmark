@@ -2,11 +2,13 @@
 
 module Metropolis
 
+
 mutable struct Lattice
     N::Int
     nn_plus::Vector{Int}
     nn_minus::Vector{Int}
     spins::Array{Int,2}
+    queue::Vector{Tuple{Int,Int}}
 end
 
 function Lattice(N::Int)
@@ -14,7 +16,9 @@ function Lattice(N::Int)
     nn_plus = [r[end], r[1:(end-1)]...]
     nn_minus = [r[2:end]..., r[1]]
     spins = ones(Int, N, N)
-    Lattice(N, nn_plus, nn_minus, spins)
+    queue = Vector{Tuple{Int,Int}}()
+    sizehint!(queue, N * N)
+    Lattice(N, nn_plus, nn_minus, spins, queue)
 end
 
 #Calculate the energy change due to a spin flip
@@ -45,7 +49,7 @@ function metropolis_step!(lattice::Lattice, beta::Float64)
     j = rand(1:lattice.N)
 
 
-    neighbors = Vector{Tuple{Int,Int}}()
+    empty!(lattice.queue)
 
     # Flip the picked spin
     spin = flip!(lattice, i, j)
@@ -55,17 +59,17 @@ function metropolis_step!(lattice::Lattice, beta::Float64)
 
     flip_prob = 1 - exp(-2 * beta)
 
-    push_neighbors!(lattice, i, j, neighbors)
+    push_neighbors!(lattice, i, j, lattice.queue)
 
-    while !isempty(neighbors)
-        i, j = popfirst!(neighbors)
+    while !isempty(lattice.queue)
+        i, j = popfirst!(lattice.queue)
         if lattice.spins[i, j] == spin && rand() < flip_prob
             dM -= 2 * spin
             dE += delta_E(lattice, i, j)
 
             flip!(lattice, i, j)
 
-            push_neighbors!(lattice, i, j, neighbors)
+            push_neighbors!(lattice, i, j, lattice.queue)
 
         end
     end
