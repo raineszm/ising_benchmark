@@ -1,5 +1,6 @@
 import numpy as np
-from numba import int64, jitclass
+from numba import int64
+from numba.experimental import jitclass
 
 
 @jitclass(

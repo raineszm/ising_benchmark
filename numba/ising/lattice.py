@@ -7,7 +7,8 @@
 from collections import OrderedDict
 
 import numpy as np
-from numba import int64, jit, jitclass, njit
+from numba import int64, jit, njit
+from numba.experimental import jitclass
 
 
 @jitclass({"N": int64, "s": int64[:, :], "nn1": int64[:], "nn2": int64[:]})

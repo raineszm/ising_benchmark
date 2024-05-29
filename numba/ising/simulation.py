@@ -1,7 +1,8 @@
 from collections import OrderedDict
 
 import numpy as np
-from numba import int64, jitclass, njit, typeof
+from numba import int64, njit, typeof
+from numba.experimental import jitclass
 
 from .fifo import Fifo
 from .lattice import Lattice

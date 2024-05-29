@@ -12,4 +12,5 @@ fname = "data.csv"
 if len(sys.argv) > 1:
     fname = sys.argv[1]
 
-ising.run.psimulate(fname, T, N, 1000, 100)
+if __name__ == '__main__':
+    ising.run.psimulate(fname, T, N, 1000, 100)
