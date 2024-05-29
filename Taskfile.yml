@@ -1,21 +1,17 @@
 # https://taskfile.dev
 
-version: '3'
+version: "3"
 
 includes:
+  cpp:
+    taskfile: ./cpp/Taskfile.yml
+    dir: ./cpp
   julia:
     taskfile: ./julia/Taskfile.yml
     dir: ./julia
   rust:
     taskfile: ./rust/Taskfile.yml
     dir: ./rust
-  cpp:
-    taskfile: ./cpp/Taskfile.yml
-    dir: ./cpp
   numba:
     taskfile: ./numba/Taskfile.yml
     dir: ./numba
-  pypy:
-    taskfile: ./pypy/Taskfile.yml
-    dir: ./pypy
-
