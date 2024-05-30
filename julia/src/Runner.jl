@@ -18,21 +18,17 @@ function run_sim(N, c_in, c_out)
     end
 end
 
-function feed_jobs(c_in, T)
-    for t in T
-        put!(c_in, t)
-    end
-    close(c_in)
-end
 
 function main(data_file)
     T = LinRange(T0, TF, STEPS)
-    c_in = Channel{Float64}(STEPS)
+    c_in = Channel{Float64}(STEPS) do ch
+        for t in T
+            put!(ch, t)
+        end
+    end
     c_out = Channel{Tuple{Float64,Float64,Float64}}(STEPS)
 
-    @spawn feed_jobs(c_in, T)
-
-    for _ in 1:nthreads()-1
+    for _ in 1:nthreads(:default)
         @spawn run_sim(N, c_in, c_out)
     end
 
