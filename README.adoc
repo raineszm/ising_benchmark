@@ -1,0 +1,60 @@
+= Ising Bencmark
+Zachary Raines <dev@zmraines.com>
+2024-05-29
+:source-highlighter: rouge
+
+This repo provides Monte Carlo simulation code for the 2D Ising model in several different languages.
+The idea is to get a sense of suitability of each language numerical work.
+Generally, I've attempted to use an equivalent implementation in each language, to the extent that it is idiomatic to do so.
+
+== Usage
+
+Needless to say each langauge must be installed before its implementation can be run.
+
+I use the following to install each language and/or manage its tools and builds
+
+C++::
+    cmake and ninja
+
+Julia::
+    juliaup
+
+Rust::
+    rustup and cargo
+
+Python::
+    pyenv and poetry
+
+To install the other tools needed to run the benchmarks you can use Homebrew (if on mac)
+
+[source,bash]
+----
+brew bundle install
+----
+
+
+To run the benchmark, each language provides a https://taskfile.dev[Taskfile], which can be used to run the benchark from within that folder
+
+[source,sh]
+----
+task benchmark
+----
+
+The benchmarks can also be run from the top level by prefixing with the language name
+
+[source,sh]
+----
+task rust:benchmark
+----
+
+Run ``task -l`` to se a list of available benchmarks.
+
+== Methods
+
+The general algorithm used by each implementation is the https://en.wikipedia.org/wiki/Metropolis–Hastings_algorithm[Metropolis-Hastings algorithm] with a block update.
+
+Several worker threads are spawned, each of which instantiates a lattice.
+Whenever a worker finishes a simulations it looks for a new temperature to simulate, reusing the same lattice.
+In this sense the code models slowly warming the sample.
+
+Benchmarking is done with ``hyperfine``.
