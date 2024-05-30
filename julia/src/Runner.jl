@@ -11,7 +11,7 @@ const TF = 5
 function run_sim(N, c_in, c_out)
     lat = Metropolis.Lattice(N)
 
-    while true
+    while isready(c_in)
         t = take!(c_in)
         (M, U) = Metropolis.ensemble_av(lat, 1 / t, 1000, 100)
         put!(c_out, (t, M, U))
