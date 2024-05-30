@@ -8,4 +8,4 @@ if length(ARGS) > 0
     data_file = ARGS[1]
 end
 
-Ising.Metropolis.Runner.main(data_file)
+Ising.Runner.main(data_file)

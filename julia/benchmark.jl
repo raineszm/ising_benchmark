@@ -10,4 +10,4 @@ if length(ARGS) > 0
     data_file = ARGS[1]
 end
 
-@btime Ising.Metropolis.Runner.main(data_file)
+@btime Ising.Runner.main(data_file)

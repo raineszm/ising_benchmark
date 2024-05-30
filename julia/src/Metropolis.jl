@@ -2,13 +2,14 @@
 
 module Metropolis
 
+import ..Queue: FIFO
 
 mutable struct Lattice
     N::Int
     nn_plus::Vector{Int}
     nn_minus::Vector{Int}
     spins::Array{Int,2}
-    queue::Vector{Tuple{Int,Int}}
+    queue::FIFO{Tuple{Int,Int}}
 end
 
 function Lattice(N::Int)
@@ -16,8 +17,7 @@ function Lattice(N::Int)
     nn_plus = [r[end], r[1:(end-1)]...]
     nn_minus = [r[2:end]..., r[1]]
     spins = ones(Int, N, N)
-    queue = Vector{Tuple{Int,Int}}()
-    sizehint!(queue, N * N)
+    queue = FIFO{Tuple{Int,Int}}(N * N)
     Lattice(N, nn_plus, nn_minus, spins, queue)
 end
 
@@ -122,7 +122,5 @@ function ensemble_av(lattice, beta, n_evolve, n_average)
     evolve!(lattice, n_evolve, beta)
     time_average!(lattice, n_average, beta)
 end
-
-include("Runner.jl")
 
 end
