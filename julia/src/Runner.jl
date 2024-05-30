@@ -1,5 +1,5 @@
 module Runner
-using Distributed: RemoteChannel, RemoteException, workers, remote_do
+using Base.Threads
 using Printf: @printf
 import ..Metropolis
 
@@ -11,22 +11,10 @@ const TF = 5
 function run_sim(N, c_in, c_out)
     lat = Metropolis.Lattice(N)
 
-    println("Started worker")
-
-    try
-        while true
-            t = take!(c_in)
-            (M, U) = Metropolis.ensemble_av(lat, 1 / t, 1000, 100)
-            put!(c_out, (t, M, U))
-        end
-    catch err
-        if isa(err, RemoteException)
-            captured = err.captured.ex
-            if isa(captured, InvalidStateException)
-                return
-            end
-        end
-        throw(err)
+    while true
+        t = take!(c_in)
+        (M, U) = Metropolis.ensemble_av(lat, 1 / t, 1000, 100)
+        put!(c_out, (t, M, U))
     end
 end
 
@@ -39,17 +27,14 @@ end
 
 function main(data_file)
     T = LinRange(T0, TF, STEPS)
-    c_in = RemoteChannel(() -> Channel{Float64}(STEPS))
-    c_out = RemoteChannel(() -> Channel{Tuple{Float64,Float64,Float64}}(STEPS))
+    c_in = Channel{Float64}(STEPS)
+    c_out = Channel{Tuple{Float64,Float64,Float64}}(STEPS)
 
-    @async feed_jobs(c_in, T)
+    @spawn feed_jobs(c_in, T)
 
-    for p in workers()
-        remote_do(run_sim, p, N, c_in, c_out)
+    for _ in 1:nthreads()-1
+        @spawn run_sim(N, c_in, c_out)
     end
-
-    println("Starting")
-
 
     open(data_file, "w") do out
         @printf(out, "#T\tM\tU\n")
@@ -61,6 +46,7 @@ function main(data_file)
             ##Update us on the simulation progress
             if mod(t, 0.1) < 0.01
                 println(t)
+                flush(stdout)
             end
 
             @printf(out, "%f\t%f\t%f\n", t, abs(M), U)
