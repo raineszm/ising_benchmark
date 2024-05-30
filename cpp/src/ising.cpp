@@ -15,33 +15,24 @@
 
 const double T0 = 0.1;
 const double TF = 5.;
-const int N = 64;
+const int N = 128;
 const int STEPS = 400;
 const int NUM_THREADS = static_cast<int>(std::thread::hardware_concurrency());
 
-inline double
-rand_double(std::minstd_rand& rng)
-{
+inline double rand_double(std::minstd_rand &rng) {
   return std::generate_canonical<double, 8>(rng);
 }
 
-template<int N>
-void
-push_neighbors(const Lattice<N>& lat,
-               int i,
-               int j,
-               std::queue<std::tuple<int, int>>& queue)
-{
+template <int N>
+void push_neighbors(const Lattice<N> &lat, int i, int j,
+                    std::queue<std::tuple<int, int>> &queue) {
   queue.push(std::make_tuple(i, lat.nnplus(j)));
   queue.push(std::make_tuple(i, lat.nnminus(j)));
   queue.push(std::make_tuple(lat.nnminus(i), j));
   queue.push(std::make_tuple(lat.nnplus(i), j));
 }
 
-template<int N>
-auto
-metropolis_step(Lattice<N>& lat, double beta)
-{
+template <int N> auto metropolis_step(Lattice<N> &lat, double beta) {
   int i = lat.random_site();
   int j = lat.random_site();
 
@@ -74,26 +65,16 @@ metropolis_step(Lattice<N>& lat, double beta)
   return std::make_tuple(dE, dM);
 }
 
-template<int N>
-void
-evolve(Lattice<N>& lat, int n, double beta)
-{
+template <int N> void evolve(Lattice<N> &lat, int n, double beta) {
 
   for (int i = 0; i < n; i++) {
     metropolis_step(lat, beta);
   }
 }
 
-inline double
-average(long agg, int n)
-{
-  return static_cast<double>(agg) / n;
-}
+inline double average(long agg, int n) { return static_cast<double>(agg) / n; }
 
-template<int N>
-auto
-time_average(Lattice<N>& lat, int n, double beta)
-{
+template <int N> auto time_average(Lattice<N> &lat, int n, double beta) {
   int U = lat.energy();
   int M = lat.magnetization();
 
@@ -114,19 +95,16 @@ time_average(Lattice<N>& lat, int n, double beta)
   return std::make_tuple(average(U_tot, n), std::sqrt(average(chi_tot, n)));
 }
 
-template<int N>
-auto
-ensemble_average(Lattice<N>& lat, double beta, int n_evolve, int n_average)
-{
+template <int N>
+auto ensemble_average(Lattice<N> &lat, double beta, int n_evolve,
+                      int n_average) {
   evolve(lat, n_evolve, beta);
   return time_average(lat, n_average, beta);
 }
 
 using data_type = std::tuple<double, double, double>;
 
-void
-worker(std::queue<double>& ts, std::mutex& mtx, Channel<data_type>& chan)
-{
+void worker(std::queue<double> &ts, std::mutex &mtx, Channel<data_type> &chan) {
   Lattice<N> lat;
 
   while (true) {
@@ -154,9 +132,7 @@ worker(std::queue<double>& ts, std::mutex& mtx, Channel<data_type>& chan)
   }
 }
 
-int
-main(int argc, char** argv)
-{
+int main(int argc, char **argv) {
   Lattice<N> lat;
 
   std::queue<double> ts;
@@ -175,13 +151,12 @@ main(int argc, char** argv)
 
   for (auto i = 0; i < NUM_THREADS; i++) {
     threads.push_back(
-      std::thread([&ts, &mtx, &chan]() { worker(ts, mtx, chan); }));
+        std::thread([&ts, &mtx, &chan]() { worker(ts, mtx, chan); }));
   }
 
   std::string file_path = "data.csv";
   if (argc > 1) {
     file_path = argv[1];
-
   }
   std::ofstream data_file(file_path);
 
@@ -197,7 +172,7 @@ main(int argc, char** argv)
     }
   }
 
-  for (std::thread& t : threads)
+  for (std::thread &t : threads)
     t.join();
 
   return 0;

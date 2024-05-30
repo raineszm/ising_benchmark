@@ -3,7 +3,7 @@ using Base.Threads
 using Printf: @printf
 import ..Metropolis
 
-const N = 64
+const N = 128
 const STEPS = 400
 const T0 = 0.1
 const TF = 5

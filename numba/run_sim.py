@@ -5,7 +5,7 @@ import numpy as np
 
 import ising.run
 
-N = 64
+N = 128
 T = np.linspace(0.1, 5, 400)
 fname = "data.csv"
 
