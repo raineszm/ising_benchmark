@@ -51,7 +51,8 @@ Run ``task -l`` to se a list of available benchmarks.
 
 == Methods
 
-The general algorithm used by each implementation is the https://en.wikipedia.org/wiki/Metropolis–Hastings_algorithm[Metropolis-Hastings algorithm] with a block update.
+The general algorithm used by each implementation is the
+https://en.wikipedia.org/wiki/Wolff_algorithm[Wolff algorithm] which gneralizes thhttps://en.wikipedia.org/wiki/Metropolis–Hastings_algorithm[Metropolis-Hastings algorithm] to operate on clusters of spins.
 
 Several worker threads are spawned, each of which instantiates a lattice.
 Whenever a worker finishes a simulations it looks for a new temperature to simulate, reusing the same lattice.
